@@ -116,6 +116,14 @@
 
   .divider { border: none; border-top: 1px solid var(--border); margin: 4px 0 12px; }
   .note { font-size: 11px; color: var(--muted); font-style: italic; }
+
+  /* TABS */
+  .tabs { display:flex; gap:2px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:5px; margin:16px 0 0; flex-wrap:wrap; }
+  .tab { padding:7px 18px; font-size:12px; cursor:pointer; border:none; background:transparent; color:var(--muted); border-radius:6px; font-family:var(--body-font); letter-spacing:0.3px; transition:all .15s; }
+  .tab.active { background:var(--accent); color:#fff; font-weight:600; }
+  .tab:hover:not(.active) { background:var(--surface2); color:var(--text); }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
 </style>
 </head>
 <body>
@@ -128,8 +136,18 @@
   <div class="last-updated" id="lastUpdatedHeader">—</div>
 </header>
 
+<div style="padding:0 32px;max-width:1400px;margin:0 auto">
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
+  <button class="tab" onclick="switchTab('update',this)">Monthly Update</button>
+  <button class="tab" onclick="switchTab('lp',this)">LP Investments</button>
+  <button class="tab" onclick="switchTab('history',this)">History &amp; Variance</button>
+</div>
+</div>
+
 <div class="main">
 
+<div id="tab-dashboard" class="tab-panel active">
   <!-- KPI strip -->
   <div class="kpi-strip">
     <div class="kpi neutral">
@@ -178,6 +196,9 @@
   </div>
   <div style="margin-bottom:24px"></div>
 
+</div><!-- /tab-dashboard -->
+
+<div id="tab-update" class="tab-panel">
   <!-- Paste Import Panel -->
   <div class="update-panel" style="border-color:var(--accent);margin-bottom:16px">
     <h3 style="color:var(--accent)">&#9650; Auto-Import from CPIC Statement</h3>
@@ -251,6 +272,9 @@
     </div>
   </div>
 
+</div><!-- /tab-update -->
+
+<div id="tab-lp" class="tab-panel">
   <!-- LP Investments -->
   <div class="lp-panel">
     <h3>Limited Partnership Investments</h3>
@@ -330,6 +354,9 @@
     </div>
   </div>
 
+</div><!-- /tab-lp -->
+
+<div id="tab-history" class="tab-panel">
   <!-- Asset Class Variance Breakdown -->
   <div class="chart-panel" id="varianceSection">
     <div class="panel-title">Asset Class Breakdown &mdash; Actual vs. CIBC Projection</div>
@@ -375,6 +402,8 @@
       </table>
     </div>
   </div>
+
+</div><!-- /tab-history -->
 
 </div><!-- /main -->
 
@@ -1163,6 +1192,17 @@ function hidePDFPreview() {
   document.getElementById('pdfPreview').style.display = 'none';
 }
 
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
+  // Rebuild charts when switching to dashboard (canvas needs to be visible)
+  if (id === 'dashboard') { setTimeout(updateAll, 50); }
+  if (id === 'history') { setTimeout(function(){ buildVariancePanel(); buildHistory(); }, 50); }
+}
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function updateAll() {

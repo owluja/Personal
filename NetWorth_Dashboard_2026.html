@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jean Genier — Net Worth Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222637;
+    --border: #2e3248;
+    --accent: #4e9af1;
+    --accent2: #f1a84e;
+    --green: #4ecf7a;
+    --red: #f16060;
+    --text: #e8eaf0;
+    --muted: #7880a0;
+    --header-font: 'Georgia', serif;
+    --body-font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--body-font); font-size: 14px; }
+  header {
+    background: linear-gradient(135deg, #0f1117 0%, #1a2040 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 32px 20px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  header h1 { font-family: var(--header-font); font-size: 22px; font-weight: normal; letter-spacing: 0.3px; color: var(--text); }
+  header .subtitle { color: var(--muted); font-size: 12px; margin-top: 4px; letter-spacing: 0.8px; text-transform: uppercase; }
+  header .last-updated { color: var(--muted); font-size: 12px; text-align: right; }
+  .main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+  /* PDF import highlight */
+  #pdfPreview .extracted-row { display:contents; }
+  #pdfPreview .ex-label { color:var(--muted); }
+  #pdfPreview .ex-value { color:var(--green); font-variant-numeric:tabular-nums; font-weight:600; }
+
+  /* KPI strip */
+  .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .kpi .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .kpi .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kpi .sub { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .kpi.positive .value { color: var(--green); }
+  .kpi.negative .value { color: var(--red); }
+  .kpi.neutral .value { color: var(--accent); }
+
+  /* Chart panel */
+  .chart-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; }
+  .panel-title { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+  .chart-wrap { position: relative; height: 340px; }
+
+  /* Two-column layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+
+  /* Update panel */
+  .update-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; }
+  .update-panel h3 { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+  .field input[type="number"], .field input[type="date"], .field input[type="text"] {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+    color: var(--text); padding: 8px 10px; font-size: 13px; width: 100%;
+    transition: border-color 0.2s;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); }
+  .section-label { grid-column: 1 / -1; font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; padding-top: 8px; border-top: 1px solid var(--border); margin-top: 4px; }
+  .btn { background: var(--accent); color: #fff; border: none; border-radius: 5px; padding: 10px 22px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+  .btn:hover { opacity: 0.85; }
+  .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+
+  /* LP table */
+  .lp-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; }
+  .lp-panel h3 { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 10px; border-bottom: 1px solid rgba(46,50,72,0.5); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  td input[type="number"] {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text); padding: 5px 8px; font-size: 12px; width: 120px;
+  }
+  td input:focus { outline: none; border-color: var(--accent); }
+  .tag { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; }
+  .tag-land { background: rgba(78,154,241,0.15); color: var(--accent); }
+  .tag-residential { background: rgba(78,207,122,0.15); color: var(--green); }
+  .tag-commercial { background: rgba(241,168,78,0.15); color: var(--accent2); }
+  .tag-hotel { background: rgba(241,96,96,0.15); color: var(--red); }
+
+  /* History table */
+  .history-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; }
+  .history-panel h3 { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+  .history-scroll { max-height: 240px; overflow-y: auto; }
+  .vs-positive { color: var(--green); }
+  .vs-negative { color: var(--red); }
+
+  /* Toulon strip */
+  .toulon-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--green); color: #0f1117;
+    padding: 10px 18px; border-radius: 6px; font-weight: 600; font-size: 13px;
+    opacity: 0; transform: translateY(8px); transition: all 0.3s; pointer-events: none; z-index: 100;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 4px 0 12px; }
+  .note { font-size: 11px; color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Jean Genier — Net Worth Dashboard</h1>
+    <div class="subtitle">Actual vs. CIBC Downside Projection · 2026–2066</div>
+  </div>
+  <div class="last-updated" id="lastUpdatedHeader">—</div>
+</header>
+
+<div class="main">
+
+  <!-- KPI strip -->
+  <div class="kpi-strip">
+    <div class="kpi neutral">
+      <div class="label">Current Net Worth</div>
+      <div class="value" id="kpiCurrent">—</div>
+      <div class="sub" id="kpiDate">No data entered yet</div>
+    </div>
+    <div class="kpi neutral">
+      <div class="label">CIBC Projection (this year)</div>
+      <div class="value" id="kpiProjected">—</div>
+      <div class="sub" id="kpiYear">—</div>
+    </div>
+    <div class="kpi" id="kpiVarCard">
+      <div class="label">Variance vs. Plan</div>
+      <div class="value" id="kpiVar">—</div>
+      <div class="sub" id="kpiVarPct">—</div>
+    </div>
+    <div class="kpi neutral">
+      <div class="label">LP Investments (Book)</div>
+      <div class="value" id="kpiLP">$1,083,333</div>
+      <div class="sub">5 partnerships · cost basis</div>
+    </div>
+    <div class="kpi neutral">
+      <div class="label">Toulon NOI (2025)</div>
+      <div class="value" id="kpiToulon">$261,000</div>
+      <div class="sub">2024: $246,000 · +6.1%</div>
+    </div>
+  </div>
+
+  <!-- Main chart -->
+  <div class="chart-panel">
+    <div class="panel-title">Net Worth — Actual vs. CIBC Downside Projection</div>
+    <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+  </div>
+
+  <!-- Two column: portfolio breakdown + allocation -->
+  <div class="two-col">
+    <div class="chart-panel" style="margin-bottom:0">
+      <div class="panel-title">Current Portfolio Breakdown</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="pieChart"></canvas></div>
+    </div>
+    <div class="chart-panel" style="margin-bottom:0">
+      <div class="panel-title">CIBC Projection Components (2026)</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="stackChart"></canvas></div>
+    </div>
+  </div>
+  <div style="margin-bottom:24px"></div>
+
+  <!-- Paste Import Panel -->
+  <div class="update-panel" style="border-color:var(--accent);margin-bottom:16px">
+    <h3 style="color:var(--accent)">&#9650; Auto-Import from CPIC Statement</h3>
+    <p class="note" style="margin-bottom:4px">Open your CPIC PDF, press <strong style="color:var(--text)">Ctrl+A</strong> then <strong style="color:var(--text)">Ctrl+C</strong> to copy all text, then paste below.</p>
+    <p class="note" style="margin-bottom:14px">The dashboard will find all account balances by account number and pre-fill the form for review.</p>
+    <div class="field" style="margin-bottom:12px">
+      <label>Paste CPIC statement text here</label>
+      <textarea id="cpicPasteBox" rows="6" placeholder="Paste copied PDF text here..."
+        style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:10px;font-size:12px;font-family:monospace;resize:vertical;line-height:1.5;transition:border-color 0.2s"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="parsePastedText()">&#128269; Extract Balances</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('cpicPasteBox').value='';hidePDFPreview()">Clear</button>
+      <span id="pdfStatus" style="color:var(--muted);font-size:12px;padding-top:10px"></span>
+    </div>
+    <div id="pdfPreview" style="display:none;margin-top:16px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--accent);margin-bottom:10px">Extracted Values — Review Before Saving</div>
+      <div id="pdfExtracted" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:12px"></div>
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn" onclick="applyPDFValues()">&#10003; Apply to Form</button>
+        <button class="btn btn-secondary" onclick="hidePDFPreview()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly update panel -->
+  <div class="update-panel">
+    <h3>Monthly Portfolio Update</h3>
+    <div class="form-grid">
+      <div class="field" style="grid-column:1/-1">
+        <label>Snapshot Date</label>
+        <input type="date" id="snapDate">
+      </div>
+
+      <div class="section-label">Jean's Accounts (CPIC)</div>
+      <div class="field"><label>Jean RRSP (45208)</label><input type="number" id="f_jean_rrsp" placeholder="0"></div>
+      <div class="field"><label>Jean TFSA (62416)</label><input type="number" id="f_jean_tfsa" placeholder="0"></div>
+      <div class="field"><label>Family Trust (44209)</label><input type="number" id="f_trust" placeholder="0"></div>
+
+      <div class="section-label">Kelly's Accounts</div>
+      <div class="field"><label>Kelly RRSP (62418)</label><input type="number" id="f_kelly_rrsp" placeholder="0"></div>
+      <div class="field"><label>Kelly TFSA (62417)</label><input type="number" id="f_kelly_tfsa" placeholder="0"></div>
+
+      <div class="section-label">Owluja Holdings Inc.</div>
+      <div class="field"><label>Owluja (411056)</label><input type="number" id="f_owluja1" placeholder="0"></div>
+      <div class="field"><label>Owluja (511531)</label><input type="number" id="f_owluja2" placeholder="0"></div>
+
+      <div class="section-label">Children's Accounts</div>
+      <div class="field"><label>James TFSA (480924)</label><input type="number" id="f_james" placeholder="0"></div>
+      <div class="field"><label>Luke TFSA (400686)</label><input type="number" id="f_luke" placeholder="0"></div>
+      <div class="field"><label>Owen TFSA (400687)</label><input type="number" id="f_owen" placeholder="0"></div>
+
+      <div class="section-label">Real Estate Equity — Toulon Apartments</div>
+      <div class="field"><label>Toulon Trailing NOI ($)</label><input type="number" id="f_toulon_noi" placeholder="261000" oninput="calcToulon()"></div>
+      <div class="field"><label>Cap Rate (%) — original: 5.68%</label><input type="number" id="f_toulon_cap" placeholder="5.68" step="0.01" oninput="calcToulon()"></div>
+      <div class="field"><label>Mortgage Balance — 100% of building ($)</label><input type="number" id="f_toulon_mortgage" placeholder="2910847" oninput="calcToulon()"></div>
+      <div class="field"><label>Building Value (100%) — auto-calculated</label><input type="number" id="f_toulon_total" placeholder="0" readonly style="opacity:0.6"></div>
+      <div class="field"><label>Your 50% Net Equity — auto-calculated</label><input type="number" id="f_toulon" placeholder="0" readonly style="opacity:0.6"></div>
+      <div class="field"><label>Ottawa Home</label><input type="number" id="f_re_ottawa" placeholder="0"></div>
+      <div class="field"><label>Cottage</label><input type="number" id="f_re_cottage" placeholder="0"></div>
+      <div class="field"><label>Florida Home (CAD)</label><input type="number" id="f_re_florida" placeholder="0"></div>
+
+      <div class="section-label">Other</div>
+      <div class="field"><label>Other Assets</label><input type="number" id="f_other" placeholder="0"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="saveSnapshot()">Save Snapshot</button>
+      <button class="btn btn-secondary" onclick="loadLastSnapshot()">Load Last Entry</button>
+      <button class="btn btn-secondary" onclick="clearForm()">Clear Form</button>
+    </div>
+  </div>
+
+  <!-- LP Investments -->
+  <div class="lp-panel">
+    <h3>Limited Partnership Investments</h3>
+    <p class="note" style="margin-bottom:12px">Enter estimated current values below. Book (cost) values are pre-loaded. Update estimated values as K-1s or NAV statements are received.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Partnership</th>
+          <th>Type</th>
+          <th>Original Cost</th>
+          <th>ROC Received</th>
+          <th>Net Book Value</th>
+          <th>Estimated Current Value</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>CLV 530 Tremblay Road</strong></td>
+          <td><span class="tag tag-land">Land</span></td>
+          <td>$137,500</td>
+          <td>—</td>
+          <td>$137,500</td>
+          <td><input type="number" id="lp_clv_tremblay" placeholder="137500" value="137500"></td>
+          <td>Undeveloped land</td>
+        </tr>
+        <tr>
+          <td><strong>CLV Opportunity Fund</strong></td>
+          <td><span class="tag tag-residential">Residential</span></td>
+          <td>$333,333</td>
+          <td>—</td>
+          <td>$333,333</td>
+          <td><input type="number" id="lp_clv_opp" placeholder="333333" value="333333"></td>
+          <td>Large-scale residential apartments</td>
+        </tr>
+        <tr>
+          <td><strong>Huntington Unity Square</strong></td>
+          <td><span class="tag tag-commercial">Commercial</span></td>
+          <td>$250,000</td>
+          <td>—</td>
+          <td>$250,000</td>
+          <td><input type="number" id="lp_huntington" placeholder="250000" value="250000"></td>
+          <td>Shopping plaza (ground-up)</td>
+        </tr>
+        <tr>
+          <td><strong>Theia Partners</strong></td>
+          <td><span class="tag tag-residential">Residential</span></td>
+          <td>$250,000</td>
+          <td>$37,500</td>
+          <td>$212,500</td>
+          <td><input type="number" id="lp_theia" placeholder="212500" value="212500"></td>
+          <td>Multi-unit family apartments</td>
+        </tr>
+        <tr>
+          <td><strong>Apollo Travelodge</strong></td>
+          <td><span class="tag tag-hotel">Hotel</span></td>
+          <td>$250,000</td>
+          <td>$15,000</td>
+          <td>$235,000</td>
+          <td><input type="number" id="lp_apollo" placeholder="235000" value="235000"></td>
+          <td>Hotel · 6% dividend</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr style="background:var(--surface2)">
+          <td colspan="2"><strong>Total</strong></td>
+          <td><strong>$1,220,833</strong></td>
+          <td><strong>$52,500</strong></td>
+          <td><strong>$1,168,333</strong></td>
+          <td><strong id="lpTotalEst">$1,168,333</strong></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+    <div style="margin-top:12px">
+      <button class="btn btn-secondary" onclick="saveLPValues()">Save LP Values</button>
+    </div>
+  </div>
+
+  <!-- Asset Class Variance Breakdown -->
+  <div class="chart-panel" id="varianceSection">
+    <div class="panel-title">Asset Class Breakdown &mdash; Actual vs. CIBC Projection</div>
+    <p class="note" style="margin-bottom:16px">Your accounts mapped to CIBC categories, plus personal assets tracked separately. CIBC does not model personal RE or LPs individually.</p>
+    <div class="chart-wrap" style="height:320px"><canvas id="varChart"></canvas></div>
+    <div style="margin-top:24px; overflow-x:auto;">
+      <table id="varTable">
+        <thead>
+          <tr>
+            <th>Asset Class / Account</th>
+            <th style="text-align:right">Your Actual</th>
+            <th style="text-align:right">CIBC Projection</th>
+            <th style="text-align:right">Variance $</th>
+            <th style="text-align:right">Variance %</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="varTableBody"></tbody>
+        <tfoot id="varTableFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Snapshot history -->
+  <div class="history-panel">
+    <h3>Snapshot History</h3>
+    <div class="history-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Liquid Portfolio</th>
+            <th>Total Net Worth</th>
+            <th>CIBC Projection</th>
+            <th>Variance $</th>
+            <th>Variance %</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="7" style="color:var(--muted);font-style:italic">No snapshots saved yet. Enter your first monthly update above.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<div id="toast">Saved ✓</div>
+
+<script>
+// ─── CIBC DOWNSIDE PROJECTION DATA ───────────────────────────────────────────
+const CIBC = {
+  years: [2026,2027,2028,2029,2030,2031,2032,2033,2034,2035,2036,2037,2038,2039,2040,2041,2042,2043,2044,2045,2046,2047,2048,2049,2050,2051,2052,2053,2054,2055,2056,2057,2058,2059,2060,2061,2062,2063,2064,2065,2066],
+  netWorth: [13833056,13914371,13988097,14050427,14104136,14173528,14103977,14186073,14140146,14094160,14186684,14280903,14373676,14463218,14545520,14620069,14699624,14433083,14127774,13366720,13275726,13164063,13031380,12514729,12210663,11987061,11732054,11443398,11050332,10624295,9932938,9546374,9118130,8683268,7650612,7263875,6838695,6373123,5863768,5306938,4699436],
+  realEstate: [4891920,4989758,5089554,5191345,5295172,5401075,5509096,5619278,5731664,5846297,5963223,6082488,6204137,6328220,6454785,6583880,6715558,6849869,6986866,7126604,7269136,7414519,7562809,7714065,7868346,8025713,8186228,8349952,8516951,8687290,6836079,6972800,7112256,7254501,2399867,2447865,2496822,2546759,2597694,2649648,2702641],
+  nonReg: [4816080,4645067,4443139,4219201,3974456,3733568,3341301,3086598,2665048,2228211,1912904,1582455,1232879,860498,461301,33773,0,0,0,1171813,808031,415547,0,0,0,0,0,0,0,0,0,0,0,0,1853957,1200324,533326,0,0,0,0],
+  tfsa: [295956,314787,348753,384766,423948,465491,509537,557236,607810,661430,719281,780618,845650,915601,989766,1068399,741390,786059,833419,1356012,1458712,1568600,1680189,1781420,1615083,1211622,773915,299653,0,0,1153384,623715,49714,37941,2500786,2719685,2912546,2930363,2370074,1761290,1100795],
+  rrspRif: [940494,997158,1057237,1120936,1188472,1260078,1335997,1416491,1501835,1592320,1688258,1789975,1897821,2012165,2133398,2261935,2034075+364141,1387355+386081,1097299,1102300,1105754,1107535,1107076,314815,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  corp: [2758606,2837599,2919414,3004179,3092089,3183317,3278046,3376469,3503790,3635901,3773018,3915367,4063188,4216735,4376272,4542081,4714460,4893719,5080190,2479991,2504093,2527863,2551307,2574429,2597234,2619726,2641911,2663793,2403381,1807005,1813475,1819859,1826160,1260826,896001,896001,896001,896001,896001,896001,896001],
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let snapshots = JSON.parse(localStorage.getItem('nw_snapshots') || '[]');
+let lpValues  = JSON.parse(localStorage.getItem('nw_lp') || 'null');
+
+// June 23 2026 snapshot — trust wind-down reallocation ($1.5M Trust → Owluja 511531)
+// Cottage updated to $2.5M. Other CPIC balances carried forward from Jan 2 with growth estimate.
+const JUNE_2026 = {
+  date: '2026-06-23',
+  jean_rrsp: 816922.69,   // carry forward — update when June PDF uploaded
+  jean_tfsa: 151962.49,
+  trust: 3228822,          // Jan $4,728,822 minus $1,500,000 transferred out
+  kelly_rrsp: 146751.50,
+  kelly_tfsa: 152012.98,
+  owluja1: 56865.14,
+  owluja2: 2113174.77,     // Jan $613,175 plus $1,500,000 received from trust
+  james: 23561.05,
+  luke: 31787.37,
+  owen: 32960.39,
+  toulon_noi: 261000, toulon_cap: 5.68, toulon_mortgage: 2910847,
+  toulon: 842992,
+  re_ottawa: 1200000,
+  re_cottage: 2500000,     // Updated from $3.0M to $2.5M
+  re_florida: 1000000,
+  other: 130000,
+  label: 'Trust reallocation — $1.5M Trust → Owluja · Cottage $2.5M'
+};
+// Seed this snapshot if not already saved
+if (!snapshots.find(s => s.date === '2026-06-23')) {
+  snapshots.push(JUNE_2026);
+  localStorage.setItem('nw_snapshots', JSON.stringify(snapshots));
+}
+
+// Jan 2 2026 snapshot pre-loaded
+const SEED = {
+  date: '2026-01-02',
+  jean_rrsp: 816922.69, jean_tfsa: 151962.49, trust: 4728821.71,
+  kelly_rrsp: 146751.50, kelly_tfsa: 152012.98,
+  owluja1: 56865.14, owluja2: 613174.77,
+  james: 23561.05, luke: 31787.37, owen: 32960.39,
+  toulon: 842992, toulon_noi: 261000, toulon_cap: 5.68, toulon_mortgage_50pct: 1455424, re_ottawa: 1200000, re_cottage: 2500000, re_florida: 1000000, other: 130000,
+  label: 'Opening (CPIC Jan 2 2026)'
+};
+
+function liquidTotal(s) {
+  return (s.jean_rrsp||0)+(s.jean_tfsa||0)+(s.trust||0)
+        +(s.kelly_rrsp||0)+(s.kelly_tfsa||0)
+        +(s.owluja1||0)+(s.owluja2||0)
+        +(s.james||0)+(s.luke||0)+(s.owen||0);
+}
+function totalNW(s) {
+  return liquidTotal(s)+(s.toulon||0)+(s.re_ottawa||0)+(s.re_cottage||0)+(s.re_florida||0)+(s.other||0)+lpBookTotal();
+}
+function lpBookTotal() {
+  return (getLPVal('lp_clv_tremblay')||137500)
+        +(getLPVal('lp_clv_opp')||333333)
+        +(getLPVal('lp_huntington')||250000)
+        +(getLPVal('lp_theia')||212500)
+        +(getLPVal('lp_apollo')||235000);
+}
+function getLPVal(id) {
+  if(lpValues && lpValues[id]) return lpValues[id];
+  return null;
+}
+function cibcForYear(y) {
+  const i = CIBC.years.indexOf(y); return i>=0 ? CIBC.netWorth[i] : null;
+}
+function yearOf(dateStr) { return parseInt(dateStr.substring(0,4)); }
+
+// ─── CHARTS ───────────────────────────────────────────────────────────────────
+let mainChart, pieChart, stackChart, varChart;
+
+function fmt(n) {
+  if(n==null||isNaN(n)) return '—';
+  return '$' + Math.round(n).toLocaleString('en-CA');
+}
+function fmtShort(n) {
+  if(Math.abs(n)>=1e6) return '$'+(n/1e6).toFixed(2)+'M';
+  return '$'+Math.round(n).toLocaleString('en-CA');
+}
+
+function buildMainChart() {
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  const cibcLabels = CIBC.years.map(String);
+  const cibcData = CIBC.netWorth;
+
+  // Build actual series from snapshots
+  const snaps = [SEED, ...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
+  const actualLabels = snaps.map(s=>s.date.substring(0,7));
+  const actualData = snaps.map(s=>totalNW(s));
+
+  // Map actuals to year axis for overlay
+  const actualByYear = {};
+  snaps.forEach(s=>{ const y=yearOf(s.date); actualByYear[y]=(actualByYear[y]||[]).concat(totalNW(s)); });
+  const actualYearData = CIBC.years.map(y=>{ const vals=actualByYear[y]; return vals?vals[vals.length-1]:null; });
+
+  if(mainChart) mainChart.destroy();
+  mainChart = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: cibcLabels,
+      datasets:[
+        {
+          label:'CIBC Downside Projection',
+          data: cibcData,
+          borderColor:'rgba(78,154,241,0.7)',
+          backgroundColor:'rgba(78,154,241,0.06)',
+          borderWidth:2,
+          borderDash:[6,3],
+          pointRadius:0,
+          fill:true,
+          tension:0.3,
+        },
+        {
+          label:'Actual Net Worth',
+          data: actualYearData,
+          borderColor:'#4ecf7a',
+          backgroundColor:'rgba(78,207,122,0.12)',
+          borderWidth:2.5,
+          pointRadius:5,
+          pointBackgroundColor:'#4ecf7a',
+          fill:false,
+          tension:0.3,
+          spanGaps:false,
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{ labels:{ color:'#7880a0', font:{size:12} } },
+        tooltip:{
+          backgroundColor:'#1a1d27',
+          borderColor:'#2e3248',
+          borderWidth:1,
+          titleColor:'#e8eaf0',
+          bodyColor:'#7880a0',
+          callbacks:{
+            label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`
+          }
+        }
+      },
+      scales:{
+        x:{ ticks:{color:'#7880a0',maxTicksLimit:10}, grid:{color:'rgba(46,50,72,0.4)'} },
+        y:{
+          ticks:{color:'#7880a0', callback:v=>'$'+(v/1e6).toFixed(1)+'M'},
+          grid:{color:'rgba(46,50,72,0.4)'}
+        }
+      }
+    }
+  });
+}
+
+function buildPieChart() {
+  const ctx = document.getElementById('pieChart').getContext('2d');
+  const snaps = [SEED, ...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
+  const s = snaps[snaps.length-1];
+  const liq = liquidTotal(s);
+  const lp = lpBookTotal();
+  const toulon = s.toulon||0;
+  const ottawa = s.re_ottawa||0;
+  const cottage = s.re_cottage||0;
+  const florida = s.re_florida||0;
+  const other = s.other||0;
+
+  if(pieChart) pieChart.destroy();
+  pieChart = new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:['Liquid Portfolio','LP Investments','Toulon Equity','Ottawa Home','Cottage','Florida Home','Other'],
+      datasets:[{
+        data:[liq,lp,toulon,ottawa,cottage,florida,other],
+        backgroundColor:['#4e9af1','#f1a84e','#4ecf7a','#a78bfa','#60c4f1','#f16090','#7880a0'],
+        borderColor:'#1a1d27', borderWidth:2,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom', labels:{color:'#7880a0',font:{size:11},padding:10} },
+        tooltip:{ callbacks:{ label: ctx=>' '+ctx.label+': '+fmt(ctx.raw) } }
+      }
+    }
+  });
+}
+
+function buildStackChart() {
+  const ctx = document.getElementById('stackChart').getContext('2d');
+  const years = CIBC.years.filter((_,i)=>i%5===0);
+  const idx = years.map(y=>CIBC.years.indexOf(y));
+
+  if(stackChart) stackChart.destroy();
+  stackChart = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels: years.map(String),
+      datasets:[
+        { label:'Real Estate', data:idx.map(i=>CIBC.realEstate[i]), backgroundColor:'rgba(78,207,122,0.7)' },
+        { label:'Non-Reg', data:idx.map(i=>CIBC.nonReg[i]), backgroundColor:'rgba(78,154,241,0.7)' },
+        { label:'TFSA', data:idx.map(i=>CIBC.tfsa[i]), backgroundColor:'rgba(167,139,250,0.7)' },
+        { label:'RRSP/RIF', data:idx.map(i=>CIBC.rrspRif[i]), backgroundColor:'rgba(241,168,78,0.7)' },
+        { label:'Corp', data:idx.map(i=>CIBC.corp[i]), backgroundColor:'rgba(241,96,96,0.65)' },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom', labels:{color:'#7880a0',font:{size:11},padding:8} },
+        tooltip:{ callbacks:{ label: ctx=>' '+ctx.dataset.label+': '+fmt(ctx.raw) } }
+      },
+      scales:{
+        x:{ stacked:true, ticks:{color:'#7880a0'}, grid:{color:'rgba(46,50,72,0.4)'} },
+        y:{ stacked:true, ticks:{color:'#7880a0', callback:v=>'$'+(v/1e6).toFixed(0)+'M'}, grid:{color:'rgba(46,50,72,0.4)'} }
+      }
+    }
+  });
+}
+
+// ─── KPIs ─────────────────────────────────────────────────────────────────────
+function updateKPIs() {
+  const snaps = [SEED, ...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
+  const last = snaps[snaps.length-1];
+  const nw = totalNW(last);
+  const yr = yearOf(last.date);
+  const proj = cibcForYear(yr);
+  const variance = proj ? nw - proj : null;
+
+  document.getElementById('kpiCurrent').textContent = fmtShort(nw);
+  document.getElementById('kpiDate').textContent = 'As of ' + last.date;
+  document.getElementById('kpiProjected').textContent = proj ? fmtShort(proj) : '—';
+  document.getElementById('kpiYear').textContent = yr + ' CIBC downside plan';
+  document.getElementById('lastUpdatedHeader').textContent = 'Last updated: ' + last.date;
+
+  if(variance!==null) {
+    const pct = ((variance/proj)*100).toFixed(1);
+    document.getElementById('kpiVar').textContent = (variance>=0?'+':'')+fmtShort(variance);
+    document.getElementById('kpiVarPct').textContent = (variance>=0?'+':'')+pct+'% vs plan';
+    const card = document.getElementById('kpiVarCard');
+    card.className = 'kpi ' + (variance>=0?'positive':'negative');
+  }
+
+  // LP total
+  document.getElementById('kpiLP').textContent = fmtShort(lpBookTotal());
+}
+
+// ─── LP ───────────────────────────────────────────────────────────────────────
+function updateLPTotal() {
+  const ids = ['lp_clv_tremblay','lp_clv_opp','lp_huntington','lp_theia','lp_apollo'];
+  const total = ids.reduce((s,id)=>s+(parseFloat(document.getElementById(id).value)||0),0);
+  document.getElementById('lpTotalEst').textContent = fmt(total);
+}
+function saveLPValues() {
+  const ids = ['lp_clv_tremblay','lp_clv_opp','lp_huntington','lp_theia','lp_apollo'];
+  const obj = {};
+  ids.forEach(id=>{ obj[id]=parseFloat(document.getElementById(id).value)||0; });
+  lpValues = obj;
+  localStorage.setItem('nw_lp', JSON.stringify(obj));
+  toast('LP values saved');
+  updateAll();
+}
+['lp_clv_tremblay','lp_clv_opp','lp_huntington','lp_theia','lp_apollo'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', updateLPTotal);
+});
+
+// ─── SNAPSHOT SAVE/LOAD ───────────────────────────────────────────────────────
+function calcToulon() {
+  const noi = parseFloat(document.getElementById('f_toulon_noi').value)||0;
+  const cap = parseFloat(document.getElementById('f_toulon_cap').value)||0;
+  const mortgage = parseFloat(document.getElementById('f_toulon_mortgage').value)||0;
+  if(noi>0 && cap>0) {
+    const total = noi / (cap/100);
+    const equity50 = (total - mortgage) / 2;
+    document.getElementById('f_toulon_total').value = Math.round(total);
+    document.getElementById('f_toulon').value = Math.round(equity50);
+  }
+}
+
+function saveSnapshot() {
+  const date = document.getElementById('snapDate').value;
+  if(!date) { alert('Please select a snapshot date.'); return; }
+  const snap = {
+    date,
+    jean_rrsp: parseFloat(document.getElementById('f_jean_rrsp').value)||0,
+    jean_tfsa: parseFloat(document.getElementById('f_jean_tfsa').value)||0,
+    trust: parseFloat(document.getElementById('f_trust').value)||0,
+    kelly_rrsp: parseFloat(document.getElementById('f_kelly_rrsp').value)||0,
+    kelly_tfsa: parseFloat(document.getElementById('f_kelly_tfsa').value)||0,
+    owluja1: parseFloat(document.getElementById('f_owluja1').value)||0,
+    owluja2: parseFloat(document.getElementById('f_owluja2').value)||0,
+    james: parseFloat(document.getElementById('f_james').value)||0,
+    luke: parseFloat(document.getElementById('f_luke').value)||0,
+    owen: parseFloat(document.getElementById('f_owen').value)||0,
+    toulon_noi: parseFloat(document.getElementById('f_toulon_noi').value)||0,
+    toulon_cap: parseFloat(document.getElementById('f_toulon_cap').value)||5.68,
+    toulon_mortgage: parseFloat(document.getElementById('f_toulon_mortgage').value)||0,
+    toulon: parseFloat(document.getElementById('f_toulon').value)||0,
+    re_ottawa: parseFloat(document.getElementById('f_re_ottawa').value)||0,
+    re_cottage: parseFloat(document.getElementById('f_re_cottage').value)||0,
+    re_florida: parseFloat(document.getElementById('f_re_florida').value)||0,
+    other: parseFloat(document.getElementById('f_other').value)||0,
+  };
+  // Replace if same date
+  const ei = snapshots.findIndex(s=>s.date===date);
+  if(ei>=0) snapshots[ei]=snap; else snapshots.push(snap);
+  snapshots.sort((a,b)=>a.date.localeCompare(b.date));
+  localStorage.setItem('nw_snapshots', JSON.stringify(snapshots));
+  toast('Snapshot saved ✓');
+  updateAll();
+}
+
+function loadLastSnapshot() {
+  const snaps = [SEED,...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
+  const s = snaps[snaps.length-1];
+  document.getElementById('snapDate').value = s.date;
+  document.getElementById('f_jean_rrsp').value = s.jean_rrsp||'';
+  document.getElementById('f_jean_tfsa').value = s.jean_tfsa||'';
+  document.getElementById('f_trust').value = s.trust||'';
+  document.getElementById('f_kelly_rrsp').value = s.kelly_rrsp||'';
+  document.getElementById('f_kelly_tfsa').value = s.kelly_tfsa||'';
+  document.getElementById('f_owluja1').value = s.owluja1||'';
+  document.getElementById('f_owluja2').value = s.owluja2||'';
+  document.getElementById('f_james').value = s.james||'';
+  document.getElementById('f_luke').value = s.luke||'';
+  document.getElementById('f_owen').value = s.owen||'';
+  document.getElementById('f_toulon_noi').value = s.toulon_noi||261000;
+  document.getElementById('f_toulon_cap').value = s.toulon_cap||5.68;
+  document.getElementById('f_toulon_mortgage').value = s.toulon_mortgage||2910847;
+  document.getElementById('f_toulon_total').value = s.toulon ? Math.round((s.toulon*2)+(s.toulon_mortgage||2910847)) : '';
+  document.getElementById('f_toulon').value = s.toulon||'';
+  document.getElementById('f_re_ottawa').value = s.re_ottawa||'';
+  document.getElementById('f_re_cottage').value = s.re_cottage||'';
+  document.getElementById('f_re_florida').value = s.re_florida||'';
+  document.getElementById('f_other').value = s.other||'';
+}
+
+function clearForm() {
+  ['f_jean_rrsp','f_jean_tfsa','f_trust','f_kelly_rrsp','f_kelly_tfsa',
+   'f_owluja1','f_owluja2','f_james','f_luke','f_owen',
+   'f_toulon_noi','f_toulon_cap','f_toulon_mortgage','f_toulon_total','f_toulon',
+   'f_re_ottawa','f_re_cottage','f_re_florida','f_other']
+  .forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('snapDate').value='';
+}
+
+// ─── HISTORY TABLE ────────────────────────────────────────────────────────────
+function buildHistory() {
+  const tbody = document.getElementById('historyBody');
+  const snaps = [SEED,...snapshots].sort((a,b)=>b.date.localeCompare(a.date));
+  if(snaps.length===0) {
+    tbody.innerHTML='<tr><td colspan="7" style="color:var(--muted)">No snapshots yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = snaps.map(s=>{
+    const yr = yearOf(s.date);
+    const proj = cibcForYear(yr);
+    const nw = totalNW(s);
+    const liq = liquidTotal(s);
+    const variance = proj ? nw-proj : null;
+    const pct = proj ? ((variance/proj)*100).toFixed(1) : null;
+    const vClass = variance>=0?'vs-positive':'vs-negative';
+    const isEditable = s.label ? '' : `<button class="btn btn-secondary" style="font-size:11px;padding:3px 8px" onclick="deleteSnap('${s.date}')">×</button>`;
+    return `<tr>
+      <td>${s.date}${s.label?'<br><span class="note">'+s.label+'</span>':''}</td>
+      <td>${fmt(liq)}</td>
+      <td><strong>${fmt(nw)}</strong></td>
+      <td>${proj?fmt(proj):'—'}</td>
+      <td class="${variance!==null?vClass:''}">${variance!==null?(variance>=0?'+':'')+fmt(variance):'—'}</td>
+      <td class="${variance!==null?vClass:''}">${pct!==null?(pct>=0?'+':'')+pct+'%':'—'}</td>
+      <td>${isEditable}</td>
+    </tr>`;
+  }).join('');
+}
+
+function deleteSnap(date) {
+  if(!confirm('Delete snapshot for '+date+'?')) return;
+  snapshots = snapshots.filter(s=>s.date!==date);
+  localStorage.setItem('nw_snapshots', JSON.stringify(snapshots));
+  updateAll();
+}
+
+// ─── LP values restore ────────────────────────────────────────────────────────
+function restoreLP() {
+  if(!lpValues) return;
+  ['lp_clv_tremblay','lp_clv_opp','lp_huntington','lp_theia','lp_apollo'].forEach(id=>{
+    if(lpValues[id]) document.getElementById(id).value=lpValues[id];
+  });
+  updateLPTotal();
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+
+// ─── VARIANCE BREAKDOWN ───────────────────────────────────────────────────────
+function buildVariancePanel() {
+  const snaps = [SEED, ...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
+  const s = snaps[snaps.length-1];
+  const yr = yearOf(s.date);
+  const ci = CIBC.years.indexOf(yr);
+
+  // Define rows — mapped to match what CIBC actually modelled in each category
+  // Corporations: Owluja + Toulon equity + LPs
+  // Real Estate:  Ottawa Home + Cottage + Florida Home
+  // (Toulon is an operating RE asset held via Owluja, so CIBC grouped it with corp)
+  const lpTotal = lpBookTotal();
+  const actualCorp  = (s.owluja1||0)+(s.owluja2||0)+(s.toulon||0)+lpTotal;
+  const actualRE    = (s.re_ottawa||0)+(s.re_cottage||0)+(s.re_florida||0);
+  const actualTFSA  = (s.jean_tfsa||0)+(s.kelly_tfsa||0)+(s.james||0)+(s.luke||0)+(s.owen||0);
+  const actualRRSP  = (s.jean_rrsp||0)+(s.kelly_rrsp||0);
+
+  const rows = [
+    // ── CIBC Real Estate ──
+    { group: true, label: 'CIBC — REAL ESTATE (Ottawa Home + Cottage + Florida)' },
+    {
+      label: 'Ottawa Home',
+      actual: s.re_ottawa||0,
+      cibc: null,
+      color: '#4ecf7a',
+      note: 'Component of CIBC Real Estate total'
+    },
+    {
+      label: 'Cottage',
+      actual: s.re_cottage||0,
+      cibc: null,
+      color: '#4ecf7a',
+      note: 'Component of CIBC Real Estate total'
+    },
+    {
+      label: 'Florida Home (CAD)',
+      actual: s.re_florida||0,
+      cibc: null,
+      color: '#4ecf7a',
+      note: 'Component of CIBC Real Estate total — update for FX'
+    },
+    {
+      label: 'Real Estate TOTAL',
+      actual: actualRE,
+      cibc: ci>=0 ? CIBC.realEstate[ci] : null,
+      color: '#4ecf7a',
+      bold: true,
+      note: 'Sum vs. CIBC Real Estate projection'
+    },
+    // ── CIBC Corporations ──
+    { group: true, label: 'CIBC — CORPORATIONS (Owluja + Toulon Equity + LPs)' },
+    {
+      label: 'Owluja Holdings (411056 + 511531)',
+      actual: (s.owluja1||0)+(s.owluja2||0),
+      cibc: null,
+      color: '#f16060',
+      note: 'CIBC Private Wealth accounts'
+    },
+    {
+      label: 'Toulon Equity (50% net of mortgage)',
+      actual: s.toulon||0,
+      cibc: null,
+      color: '#f16060',
+      note: 'NOI ÷ 5.68% cap rate, less mortgage'
+    },
+    {
+      label: 'LP Investments (book value)',
+      actual: lpTotal,
+      cibc: null,
+      color: '#f16060',
+      note: '5 partnerships at net book value'
+    },
+    {
+      label: 'Corporations TOTAL',
+      actual: actualCorp,
+      cibc: ci>=0 ? CIBC.corp[ci] : null,
+      color: '#f16060',
+      bold: true,
+      note: 'Sum vs. CIBC Corporations projection'
+    },
+    // ── CIBC Non-Reg ──
+    { group: true, label: 'CIBC — NON-REG ACCOUNTS' },
+    {
+      label: 'Family Trust (44209)',
+      actual: s.trust||0,
+      cibc: ci>=0 ? CIBC.nonReg[ci] : null,
+      color: '#4e9af1',
+      bold: true,
+      note: 'Mapped to CIBC Non-Reg line'
+    },
+    // ── CIBC TFSA ──
+    { group: true, label: 'CIBC — TFSA ACCOUNTS' },
+    {
+      label: 'Jean TFSA',
+      actual: s.jean_tfsa||0,
+      cibc: null,
+      color: '#a78bfa',
+      note: ''
+    },
+    {
+      label: 'Kelly TFSA',
+      actual: s.kelly_tfsa||0,
+      cibc: null,
+      color: '#a78bfa',
+      note: ''
+    },
+    {
+      label: "Children's TFSAs (James + Luke + Owen)",
+      actual: (s.james||0)+(s.luke||0)+(s.owen||0),
+      cibc: null,
+      color: '#a78bfa',
+      note: ''
+    },
+    {
+      label: 'TFSA TOTAL',
+      actual: actualTFSA,
+      cibc: ci>=0 ? CIBC.tfsa[ci] : null,
+      color: '#a78bfa',
+      bold: true,
+      note: 'Sum vs. CIBC TFSA projection'
+    },
+    // ── CIBC RRSP/RIF ──
+    { group: true, label: 'CIBC — RRSP / RIF ACCOUNTS' },
+    {
+      label: 'Jean RRSP',
+      actual: s.jean_rrsp||0,
+      cibc: null,
+      color: '#f1a84e',
+      note: 'Converts to RIF ~age 71'
+    },
+    {
+      label: 'Kelly RRSP',
+      actual: s.kelly_rrsp||0,
+      cibc: null,
+      color: '#f1a84e',
+      note: 'Converts to RIF ~age 71'
+    },
+    {
+      label: 'RRSP/RIF TOTAL',
+      actual: actualRRSP,
+      cibc: ci>=0 ? CIBC.rrspRif[ci] : null,
+      color: '#f1a84e',
+      bold: true,
+      note: 'Sum vs. CIBC RRSP/RIF projection'
+    },
+    // ── Other ──
+    { group: true, label: 'OTHER ASSETS' },
+    {
+      label: 'Other Assets',
+      actual: s.other||0,
+      cibc: null,
+      color: '#7880a0',
+      note: '$130K fixed — vehicles, personal property etc.'
+    },
+  ];
+
+  // Chart shows only subtotal/total rows (bold:true) — avoids double-counting components
+  const dataRows = rows.filter(r=>!r.group && r.bold);
+  const labels = dataRows.map(r=>r.label.replace(' TOTAL','').replace(' (Jean + Kelly + Children)','').replace(' (Jean + Kelly)',''));
+  const actuals = dataRows.map(r=>r.actual);
+  const projections = dataRows.map(r=>r.cibc);
+  const colors = dataRows.map(r=>r.color);
+
+  const ctx = document.getElementById('varChart').getContext('2d');
+  if(varChart) varChart.destroy();
+  varChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Your Actual',
+          data: actuals,
+          backgroundColor: colors.map(c=>c+'cc'),
+          borderColor: colors,
+          borderWidth: 1.5,
+          borderRadius: 3,
+        },
+        {
+          label: 'CIBC Projection',
+          data: projections,
+          backgroundColor: 'rgba(120,128,160,0.2)',
+          borderColor: 'rgba(120,128,160,0.6)',
+          borderWidth: 1.5,
+          borderDash: [4,2],
+          borderRadius: 3,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#7880a0', font: { size: 12 } } },
+        tooltip: {
+          backgroundColor: '#1a1d27', borderColor: '#2e3248', borderWidth: 1,
+          titleColor: '#e8eaf0', bodyColor: '#7880a0',
+          callbacks: {
+            label: ctx => {
+              if(ctx.raw == null) return ` ${ctx.dataset.label}: No CIBC projection`;
+              return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#7880a0', maxRotation: 35, font: { size: 11 } }, grid: { color: 'rgba(46,50,72,0.4)' } },
+        y: { ticks: { color: '#7880a0', callback: v => '$'+(v/1e6).toFixed(1)+'M' }, grid: { color: 'rgba(46,50,72,0.4)' } }
+      }
+    }
+  });
+
+  // Build table
+  const tbody = document.getElementById('varTableBody');
+  const tfoot = document.getElementById('varTableFoot');
+  let totalActual = 0, totalCibc = 0;
+  let html = '';
+
+  // Only count TOTAL rows (bold:true) toward the grand total to avoid double-counting
+  rows.forEach(r => {
+    if(r.group) {
+      html += `<tr style="background:var(--surface2)">
+        <td colspan="6" style="font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--accent);padding:10px 10px 6px">${r.label}</td>
+      </tr>`;
+      return;
+    }
+    const variance = r.cibc != null ? r.actual - r.cibc : null;
+    const pct = (variance != null && r.cibc > 0) ? ((variance/r.cibc)*100).toFixed(1) : null;
+    const vClass = variance == null ? '' : variance >= 0 ? 'vs-positive' : 'vs-negative';
+    const varStr = variance != null ? (variance>=0?'+':'')+fmt(variance) : '—';
+    const pctStr = pct != null ? (pct>=0?'+':'')+pct+'%' : (r.cibc==null?'<span style="color:var(--muted);font-style:italic">—</span>':'—');
+    const dot = `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${r.color};margin-right:7px;flex-shrink:0;${r.bold?'border:2px solid white;':''}" ></span>`;
+    const rowBg = r.bold ? 'background:rgba(255,255,255,0.04);' : '';
+    const rowWeight = r.bold ? 'font-weight:700;' : '';
+    // Accumulate grand totals from bold (subtotal) rows only, or from single-line categories
+    if(r.bold || r.cibc != null && !rows.some(x=>x.bold && x.color===r.color)) {
+      if(r.bold) {
+        totalActual += r.actual;
+        if(r.cibc != null) totalCibc += r.cibc;
+      }
+    }
+    html += `<tr style="${rowBg}${rowWeight}">
+      <td style="display:flex;align-items:center;padding-left:${r.bold?'10px':'22px'}">${dot}${r.label}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums">${fmt(r.actual)}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)">${r.cibc!=null?fmt(r.cibc):'<span style="color:var(--muted);font-style:italic">—</span>'}</td>
+      <td style="text-align:right;font-variant-numeric:tabular-nums" class="${vClass}">${varStr}</td>
+      <td style="text-align:right" class="${vClass}">${pctStr}</td>
+      <td style="color:var(--muted);font-size:11px">${r.note}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+
+  const totalVar = totalActual - totalCibc;
+  const totalPct = totalCibc > 0 ? ((totalVar/totalCibc)*100).toFixed(1) : null;
+  const tClass = totalVar >= 0 ? 'vs-positive' : 'vs-negative';
+  tfoot.innerHTML = `<tr style="background:var(--surface2);font-weight:700;border-top:2px solid var(--border)">
+    <td>Grand Total (CIBC categories)</td>
+    <td style="text-align:right">${fmt(totalActual)}</td>
+    <td style="text-align:right;color:var(--muted)">${fmt(totalCibc)}</td>
+    <td style="text-align:right" class="${tClass}">${totalVar>=0?'+':''}${fmt(totalVar)}</td>
+    <td style="text-align:right" class="${tClass}">${totalPct?(totalPct>=0?'+':'')+totalPct+'%':'—'}</td>
+    <td style="color:var(--muted);font-size:11px">Subtotals only — components excluded to avoid double-count</td>
+  </tr>`;
+}
+
+
+// ─── PASTE IMPORT ─────────────────────────────────────────────────────────────
+const ACCOUNT_MAP = [
+  { patterns: ['Jean Genier RRSP (45208)', 'RRSP (45208)', '45208'], field: 'f_jean_rrsp',  label: 'Jean RRSP (45208)' },
+  { patterns: ['Jean Genier TFSA (62416)', 'TFSA (62416)', '62416'], field: 'f_jean_tfsa',  label: 'Jean TFSA (62416)' },
+  { patterns: ['Jean R. Genier Family Trust (44209)', 'Family Trust (44209)', '44209'], field: 'f_trust', label: 'Family Trust (44209)' },
+  { patterns: ['Kelly Genier RRSP (62418)', 'RRSP (62418)', '62418'], field: 'f_kelly_rrsp', label: 'Kelly RRSP (62418)' },
+  { patterns: ['Kelly Genier TFSA (62417)', 'TFSA (62417)', '62417'], field: 'f_kelly_tfsa', label: 'Kelly TFSA (62417)' },
+  { patterns: ['Owluja Holdings Inc. (411056)', '411056'],            field: 'f_owluja1',   label: 'Owluja (411056)' },
+  { patterns: ['Owluja Holdings Inc. (511531)', '511531'],            field: 'f_owluja2',   label: 'Owluja (511531)' },
+  { patterns: ['James Genier TFSA (480924)', '480924'],               field: 'f_james',     label: 'James TFSA (480924)' },
+  { patterns: ['Luke Genier TFSA (400686)', '400686'],                field: 'f_luke',      label: 'Luke TFSA (400686)' },
+  { patterns: ['Owen Genier TFSA (400687)', '400687'],                field: 'f_owen',      label: 'Owen TFSA (400687)' },
+];
+
+let pendingPDFValues = {};
+
+function parsePastedText() {
+  const text = document.getElementById('cpicPasteBox').value;
+  const status = document.getElementById('pdfStatus');
+  if (!text.trim()) {
+    status.style.color = 'var(--red)';
+    status.textContent = 'Nothing pasted yet.';
+    return;
+  }
+  const extracted = parseCPICText(text);
+  const found = Object.keys(extracted).filter(k => k !== '_date').length;
+  if (found === 0) {
+    status.style.color = 'var(--red)';
+    status.textContent = 'No account balances found. Check the pasted text includes account numbers.';
+    return;
+  }
+  pendingPDFValues = extracted;
+  showPDFPreview(extracted);
+  status.style.color = 'var(--green)';
+  status.textContent = '\u2713 ' + found + ' account' + (found!==1?'s':'') + ' found';
+}
+
+function parseCPICText(text) {
+  const results = {};
+  const lines = text.replace(/\r/g, '\n').split('\n').map(l => l.trim()).filter(Boolean);
+
+  for (const account of ACCOUNT_MAP) {
+    for (const pattern of account.patterns) {
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes(pattern)) {
+          // Search this line and next 4 lines for dollar amounts
+          const searchText = lines.slice(i, i + 5).join(' ');
+          const moneyMatches = [...searchText.matchAll(/\$?([\d]{1,3}(?:,[\d]{3})+(?:\.\d{2})?)/g)];
+          const values = moneyMatches
+            .map(m => parseFloat(m[0].replace(/[$,]/g, '')))
+            .filter(v => v > 5000); // skip small numbers / account numbers
+          if (values.length > 0) {
+            // Pick the first value >= 5000 that appears after the account name
+            results[account.field] = values[0];
+            break;
+          }
+        }
+      }
+      if (results[account.field]) break;
+    }
+  }
+
+  // Extract statement date — try YYYY-MM-DD first, then "Month DD, YYYY"
+  const d1 = text.match(/\d{4}-\d{2}-\d{2}/);
+  const d2 = text.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}/i);
+  if (d1) results['_date'] = d1[0];
+  else if (d2) results['_date'] = d2[0];
+
+  return results;
+}
+
+function showPDFPreview(extracted) {
+  const container = document.getElementById('pdfExtracted');
+  let html = '';
+  for (const account of ACCOUNT_MAP) {
+    const val = extracted[account.field];
+    html += `<span class="ex-label">${account.label}</span>`;
+    html += `<span class="ex-value">${val != null ? fmt(val) : '<span style="color:var(--muted);font-style:italic">Not found in text</span>'}</span>`;
+  }
+  if (extracted['_date']) {
+    html += `<span class="ex-label" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Statement Date</span>`;
+    html += `<span class="ex-value" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">${extracted['_date']}</span>`;
+  }
+  container.innerHTML = html;
+  document.getElementById('pdfPreview').style.display = 'block';
+}
+
+function applyPDFValues() {
+  loadLastSnapshot(); // carry forward RE, Toulon, other from last snapshot
+  for (const account of ACCOUNT_MAP) {
+    if (pendingPDFValues[account.field] != null) {
+      document.getElementById(account.field).value = pendingPDFValues[account.field];
+    }
+  }
+  if (pendingPDFValues['_date']) {
+    const d = new Date(pendingPDFValues['_date']);
+    if (!isNaN(d)) document.getElementById('snapDate').value = d.toISOString().substring(0,10);
+  }
+  hidePDFPreview();
+  toast('Values applied \u2014 review and save when ready \u2713');
+  document.querySelectorAll('.update-panel')[1].scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function hidePDFPreview() {
+  document.getElementById('pdfPreview').style.display = 'none';
+}
+
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function updateAll() {
+  updateKPIs();
+  buildMainChart();
+  buildPieChart();
+  buildStackChart();
+  buildVariancePanel();
+  buildHistory();
+}
+
+// Set today's date as default
+document.getElementById('snapDate').value = new Date().toISOString().substring(0,10);
+restoreLP();
+updateAll();
+</script>
+</body>
+</html>

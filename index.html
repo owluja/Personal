@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owluja Holdings — Personal Dashboards</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0f1117;
+  color: #e8eaf0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* PASSWORD OVERLAY */
+#pw-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0f1117;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pw-box {
+  background: #1a1d27;
+  border: 1px solid #2e3248;
+  border-radius: 12px;
+  padding: 40px 36px;
+  width: 320px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.pw-owl { font-size: 32px; margin-bottom: 10px; }
+.pw-title { font-size: 18px; font-weight: 600; color: #e8eaf0; margin-bottom: 4px; font-family: Georgia, serif; }
+.pw-sub { font-size: 12px; color: #7880a0; margin-bottom: 28px; }
+.pw-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #0f1117;
+  border: 1px solid #2e3248;
+  border-radius: 7px;
+  color: #e8eaf0;
+  font-size: 14px;
+  outline: none;
+  margin-bottom: 12px;
+  text-align: center;
+  letter-spacing: 2px;
+}
+.pw-input:focus { border-color: #4e9af1; }
+.pw-btn {
+  width: 100%;
+  padding: 10px;
+  background: #4e9af1;
+  border: none;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+.pw-btn:hover { background: #3a84d8; }
+.pw-err { color: #f16060; font-size: 12px; margin-top: 10px; min-height: 16px; }
+
+/* LANDING PAGE */
+#landing {
+  display: none;
+  text-align: center;
+  padding: 40px 20px;
+}
+.landing-owl { font-size: 48px; margin-bottom: 16px; }
+.landing-title {
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: normal;
+  color: #e8eaf0;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.landing-sub {
+  font-size: 12px;
+  color: #7880a0;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-bottom: 48px;
+}
+.cards {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.dashboard-card {
+  display: inline-block;
+  background: #1a1d27;
+  border: 1px solid #2e3248;
+  border-radius: 12px;
+  padding: 28px 36px;
+  text-decoration: none;
+  color: #e8eaf0;
+  transition: all .2s;
+  min-width: 220px;
+}
+.dashboard-card:hover {
+  border-color: #4e9af1;
+  background: #1e2235;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(78,154,241,0.15);
+}
+.card-soon {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+.card-icon { font-size: 28px; margin-bottom: 10px; }
+.card-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.card-desc { font-size: 12px; color: #7880a0; }
+.card-badge {
+  display: inline-block;
+  font-size: 10px;
+  background: #2e3248;
+  color: #7880a0;
+  border-radius: 4px;
+  padding: 2px 7px;
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+}
+.footer {
+  position: fixed;
+  bottom: 20px;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: #3a3f55;
+}
+</style>
+</head>
+<body>
+
+<!-- PASSWORD OVERLAY -->
+<div id="pw-overlay">
+  <div class="pw-box">
+    <div class="pw-owl">🦉</div>
+    <div class="pw-title">Owluja Holdings</div>
+    <div class="pw-sub">Personal Financial Dashboards</div>
+    <input id="pw-input" class="pw-input" type="password" placeholder="Enter password" autocomplete="current-password"/>
+    <button id="pw-btn" class="pw-btn">Enter</button>
+    <div id="pw-err" class="pw-err"></div>
+  </div>
+</div>
+
+<!-- LANDING PAGE -->
+<div id="landing">
+  <div class="landing-owl">🦉</div>
+  <div class="landing-title">Owluja Holdings</div>
+  <div class="landing-sub">Personal Financial Dashboards</div>
+  <div class="cards">
+    <a class="dashboard-card" href="networth.html">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Net Worth</div>
+      <div class="card-desc">Portfolio · Real Estate · Projections</div>
+    </a>
+    <div class="dashboard-card card-soon">
+      <div class="card-icon">🏦</div>
+      <div class="card-title">LP Investments</div>
+      <div class="card-desc">Limited Partnerships · Returns · Cash Flow</div>
+      <div class="card-badge">Coming Soon</div>
+    </div>
+  </div>
+  <div class="footer">Confidential · Owluja Holdings Inc.</div>
+</div>
+
+<script>
+(function() {
+  const PASS = 'OWLUJA2026';
+  const KEY = 'personal_auth';
+  const SESSION_HOURS = 8;
+
+  function isAuthed() {
+    try {
+      const d = JSON.parse(sessionStorage.getItem(KEY));
+      return d && d.ok && (Date.now() - d.t) < SESSION_HOURS * 3600000;
+    } catch(e) { return false; }
+  }
+
+  function showLanding() {
+    document.getElementById('pw-overlay').style.display = 'none';
+    document.getElementById('landing').style.display = 'block';
+  }
+
+  function attempt() {
+    if (document.getElementById('pw-input').value === PASS) {
+      sessionStorage.setItem(KEY, JSON.stringify({ok: true, t: Date.now()}));
+      showLanding();
+    } else {
+      document.getElementById('pw-err').textContent = 'Incorrect password. Please try again.';
+      document.getElementById('pw-input').value = '';
+      document.getElementById('pw-input').focus();
+    }
+  }
+
+  if (isAuthed()) {
+    document.addEventListener('DOMContentLoaded', showLanding);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('pw-btn').addEventListener('click', attempt);
+    document.getElementById('pw-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') attempt();
+    });
+    if (!isAuthed()) document.getElementById('pw-input').focus();
+  });
+})();
+</script>
+</body>
+</html>

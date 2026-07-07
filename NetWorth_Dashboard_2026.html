@@ -116,14 +116,6 @@
 
   .divider { border: none; border-top: 1px solid var(--border); margin: 4px 0 12px; }
   .note { font-size: 11px; color: var(--muted); font-style: italic; }
-
-  /* TABS */
-  .tabs { display:flex; gap:2px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:5px; margin:16px 0 0; flex-wrap:wrap; }
-  .tab { padding:7px 18px; font-size:12px; cursor:pointer; border:none; background:transparent; color:var(--muted); border-radius:6px; font-family:var(--body-font); letter-spacing:0.3px; transition:all .15s; }
-  .tab.active { background:var(--accent); color:#fff; font-weight:600; }
-  .tab:hover:not(.active) { background:var(--surface2); color:var(--text); }
-  .tab-panel { display:none; }
-  .tab-panel.active { display:block; }
 </style>
 </head>
 <body>
@@ -133,21 +125,21 @@
     <h1>Jean Genier — Net Worth Dashboard</h1>
     <div class="subtitle">Actual vs. CIBC Downside Projection · 2026–2066</div>
   </div>
-  <div class="last-updated" id="lastUpdatedHeader">—</div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+    <div class="last-updated" id="lastUpdatedHeader">—</div>
+    <button class="btn" onclick="exportHTML()" style="font-size:12px;padding:7px 16px;background:var(--green);color:#0f1117">
+      &#8595; Export &amp; Save File
+    </button>
+  </div>
 </header>
-
-<div style="padding:0 32px;max-width:1400px;margin:0 auto">
-<div class="tabs">
-  <button class="tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
-  <button class="tab" onclick="switchTab('update',this)">Monthly Update</button>
-  <button class="tab" onclick="switchTab('lp',this)">LP Investments</button>
-  <button class="tab" onclick="switchTab('history',this)">History &amp; Variance</button>
-</div>
+<div id="syncBanner" style="display:none;background:#2a1f0a;border-bottom:1px solid var(--accent2);padding:10px 32px;font-size:12px;color:var(--accent2);display:flex;align-items:center;gap:12px">
+  <span>&#9888; You have unsaved snapshots in this browser that aren't baked into the GitHub file yet.</span>
+  <button class="btn" onclick="exportHTML()" style="font-size:11px;padding:5px 12px;background:var(--accent2);color:#0f1117;white-space:nowrap">Export &amp; Save File Now</button>
+  <button onclick="dismissSyncBanner()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;margin-left:auto">&#x2715;</button>
 </div>
 
 <div class="main">
 
-<div id="tab-dashboard" class="tab-panel active">
   <!-- KPI strip -->
   <div class="kpi-strip">
     <div class="kpi neutral">
@@ -196,9 +188,6 @@
   </div>
   <div style="margin-bottom:24px"></div>
 
-</div><!-- /tab-dashboard -->
-
-<div id="tab-update" class="tab-panel">
   <!-- Paste Import Panel -->
   <div class="update-panel" style="border-color:var(--accent);margin-bottom:16px">
     <h3 style="color:var(--accent)">&#9650; Auto-Import from CPIC Statement</h3>
@@ -272,9 +261,6 @@
     </div>
   </div>
 
-</div><!-- /tab-update -->
-
-<div id="tab-lp" class="tab-panel">
   <!-- LP Investments -->
   <div class="lp-panel">
     <h3>Limited Partnership Investments</h3>
@@ -354,9 +340,6 @@
     </div>
   </div>
 
-</div><!-- /tab-lp -->
-
-<div id="tab-history" class="tab-panel">
   <!-- Asset Class Variance Breakdown -->
   <div class="chart-panel" id="varianceSection">
     <div class="panel-title">Asset Class Breakdown &mdash; Actual vs. CIBC Projection</div>
@@ -403,8 +386,6 @@
     </div>
   </div>
 
-</div><!-- /tab-history -->
-
 </div><!-- /main -->
 
 <div id="toast">Saved ✓</div>
@@ -422,35 +403,52 @@ const CIBC = {
 };
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
-let snapshots = JSON.parse(localStorage.getItem('nw_snapshots') || '[]');
-let lpValues  = JSON.parse(localStorage.getItem('nw_lp') || 'null');
+// ── BAKED DATA — updated on each export, takes priority over localStorage ──
+const BAKED_SNAPSHOTS = [];
+const BAKED_LP = null;
+// ── END BAKED DATA ──
 
-// June 23 2026 snapshot — trust wind-down reallocation ($1.5M Trust → Owluja 511531)
-// Cottage updated to $2.5M. Other CPIC balances carried forward from Jan 2 with growth estimate.
+// Priority: baked data is the source of truth (GitHub file).
+// Merge any localStorage snapshots that post-date the latest baked snapshot,
+// so work-in-progress on this browser isn't lost before the next export.
+const _lsSnaps = JSON.parse(localStorage.getItem('nw_snapshots') || '[]');
+const _lsLP    = JSON.parse(localStorage.getItem('nw_lp') || 'null');
+
+let snapshots, lpValues;
+if (BAKED_SNAPSHOTS.length > 0) {
+  const latestBaked = BAKED_SNAPSHOTS.reduce((a,b)=>a.date>b.date?a:b).date;
+  const newerLocal  = _lsSnaps.filter(s => s.date > latestBaked && !s.label);
+  snapshots = [...BAKED_SNAPSHOTS, ...newerLocal];
+  lpValues  = BAKED_LP !== null ? BAKED_LP : _lsLP;
+} else {
+  // No baked data yet — use localStorage
+  snapshots = _lsSnaps;
+  lpValues  = _lsLP;
+}
+
+// Seed June 2026 snapshot if not already present
 const JUNE_2026 = {
   date: '2026-06-23',
-  jean_rrsp: 816922.69,   // carry forward — update when June PDF uploaded
+  jean_rrsp: 816922.69,
   jean_tfsa: 151962.49,
-  trust: 3228822,          // Jan $4,728,822 minus $1,500,000 transferred out
+  trust: 3228822,
   kelly_rrsp: 146751.50,
   kelly_tfsa: 152012.98,
   owluja1: 56865.14,
-  owluja2: 2113174.77,     // Jan $613,175 plus $1,500,000 received from trust
+  owluja2: 2113174.77,
   james: 23561.05,
   luke: 31787.37,
   owen: 32960.39,
   toulon_noi: 261000, toulon_cap: 5.68, toulon_mortgage: 2910847,
   toulon: 842992,
   re_ottawa: 1200000,
-  re_cottage: 2500000,     // Updated from $3.0M to $2.5M
+  re_cottage: 2500000,
   re_florida: 1000000,
   other: 130000,
   label: 'Trust reallocation — $1.5M Trust → Owluja · Cottage $2.5M'
 };
-// Seed this snapshot if not already saved
 if (!snapshots.find(s => s.date === '2026-06-23')) {
   snapshots.push(JUNE_2026);
-  localStorage.setItem('nw_snapshots', JSON.stringify(snapshots));
 }
 
 // Jan 2 2026 snapshot pre-loaded
@@ -1193,15 +1191,84 @@ function hidePDFPreview() {
 }
 
 
-// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
-function switchTab(id, el) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + id).classList.add('active');
-  el.classList.add('active');
-  // Rebuild charts when switching to dashboard (canvas needs to be visible)
-  if (id === 'dashboard') { setTimeout(updateAll, 50); }
-  if (id === 'history') { setTimeout(function(){ buildVariancePanel(); buildHistory(); }, 50); }
+// ─── SYNC BANNER ──────────────────────────────────────────────────────────────
+function checkSyncStatus() {
+  const banner = document.getElementById('syncBanner');
+  if (!banner) return;
+  const lsHasData = _lsSnaps.filter(s => !s.label).length > 0;
+  // Show banner if: (a) no baked data but localStorage has snapshots, or
+  //                (b) baked data exists but localStorage has newer snapshots
+  if (BAKED_SNAPSHOTS.length === 0) {
+    // No baked data at all — show banner if localStorage has any user snapshots
+    setBannerText(banner, lsHasData,
+      '⚠ You have unsaved snapshots in this browser that aren’t baked into the GitHub file yet.');
+    return;
+  }
+  const latestBaked = BAKED_SNAPSHOTS.reduce((a,b)=>a.date>b.date?a:b).date;
+  const hasNewer = _lsSnaps.some(s => s.date > latestBaked && !s.label);
+  setBannerText(banner, hasNewer,
+    '⚠ You have snapshots newer than the GitHub file — export to save them.');
+}
+function setBannerText(banner, show, msg) {
+  if (show) {
+    banner.querySelector('span').textContent = msg;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+function dismissSyncBanner() {
+  document.getElementById('syncBanner').style.display = 'none';
+}
+
+// ─── EXPORT TO FILE ───────────────────────────────────────────────────────────
+async function exportHTML() {
+  const status = document.getElementById('lastUpdatedHeader');
+  const origText = status.textContent;
+  status.textContent = 'Preparing export...';
+
+  try {
+    // Fetch the clean original source from the server — avoids DOM corruption
+    const resp = await fetch(window.location.href);
+    const src  = await resp.text();
+
+    // Inject baked data
+    const bakedSnapshots = JSON.stringify(snapshots, null, 2);
+    const bakedLP = lpValues ? JSON.stringify(lpValues, null, 2) : 'null';
+
+    let updated = src
+      .replace(
+        /const BAKED_SNAPSHOTS = [\s\S]*?;(?=\s*const BAKED_LP)/,
+        'const BAKED_SNAPSHOTS = ' + bakedSnapshots + ';\n'
+      )
+      .replace(
+        /const BAKED_LP = [\s\S]*?;(?=\s*\/\/ ── END BAKED)/,
+        'const BAKED_LP = ' + bakedLP + ';\n'
+      );
+
+    // Verify the replacements actually worked
+    if (updated === src) {
+      throw new Error('Baked data markers not found — export pattern mismatch.');
+    }
+
+    // Download
+    const blob = new Blob([updated], {type: 'text/html'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    const today = new Date().toISOString().substring(0, 10);
+    a.download = 'NetWorth_Dashboard_' + today + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('File downloaded — upload to GitHub to save ✓');
+  } catch(e) {
+    alert('Export failed: ' + e.message + '\n\nIf opening locally (file://), you must serve the file from GitHub or a local server for export to work.');
+    console.error('Export error:', e);
+  } finally {
+    status.textContent = origText;
+  }
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
@@ -1212,6 +1279,7 @@ function updateAll() {
   buildStackChart();
   buildVariancePanel();
   buildHistory();
+  checkSyncStatus();
 }
 
 // Set today's date as default

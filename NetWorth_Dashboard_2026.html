@@ -746,9 +746,21 @@ function saveSnapshot() {
     re_florida: parseFloat(document.getElementById('f_re_florida').value)||0,
     other: parseFloat(document.getElementById('f_other').value)||0,
   };
-  // Replace if same date
+  // Replace if same date — but confirm first, since this silently overwrites history otherwise
   const ei = snapshots.findIndex(s=>s.date===date);
-  if(ei>=0) snapshots[ei]=snap; else snapshots.push(snap);
+  if(ei>=0) {
+    const existing = snapshots[ei];
+    if (existing.label) {
+      alert('A labeled snapshot already exists for ' + date + ' (' + existing.label + '). Choose a different date to avoid overwriting it.');
+      return;
+    }
+    if (!confirm('A snapshot for ' + date + ' already exists. Overwrite it with these new values?\n\n(If you meant to add a NEW month, check the date field above — it may not have picked up the statement date correctly.)')) {
+      return;
+    }
+    snapshots[ei]=snap;
+  } else {
+    snapshots.push(snap);
+  }
   snapshots.sort((a,b)=>a.date.localeCompare(b.date));
   localStorage.setItem('nw_snapshots', JSON.stringify(snapshots));
   toast('Snapshot saved ✓');
@@ -1171,11 +1183,28 @@ function parseCPICText(text) {
     }
   }
 
-  // Extract statement date — try YYYY-MM-DD first, then "Month DD, YYYY"
-  const d1 = text.match(/\d{4}-\d{2}-\d{2}/);
-  const d2 = text.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}/i);
-  if (d1) results['_date'] = d1[0];
-  else if (d2) results['_date'] = d2[0];
+  // Extract statement date — try several common formats, in order of reliability
+  const MONTHS = 'January|February|March|April|May|June|July|August|September|October|November|December';
+  const d1 = text.match(/\b\d{4}-\d{2}-\d{2}\b/);                                    // 2026-07-18
+  const d2 = text.match(new RegExp(`(${MONTHS})\\s+\\d{1,2},?\\s+\\d{4}`, 'i'));      // July 18, 2026 / July 18 2026
+  const d3 = text.match(new RegExp(`\\d{1,2}\\s+(${MONTHS})\\s+\\d{4}`, 'i'));        // 18 July 2026
+  const d4 = text.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/);                              // 07/18/2026 or 18/07/2026
+  const d5 = text.match(new RegExp(`\\d{1,2}[-\\s](${MONTHS.split('|').map(m=>m.slice(0,3)).join('|')})[a-z]*[-\\s]\\d{2,4}`, 'i')); // 18-Jul-2026
+
+  let rawDate = null;
+  if (d1) rawDate = d1[0];
+  else if (d2) rawDate = d2[0];
+  else if (d3) rawDate = d3[0];
+  else if (d4) rawDate = d4[0];
+  else if (d5) rawDate = d5[0];
+
+  if (rawDate) {
+    const parsed = new Date(rawDate);
+    results['_date'] = !isNaN(parsed) ? parsed.toISOString().substring(0,10) : rawDate;
+    results['_dateFound'] = true;
+  } else {
+    results['_dateFound'] = false;
+  }
 
   return results;
 }
@@ -1188,9 +1217,11 @@ function showPDFPreview(extracted) {
     html += `<span class="ex-label">${account.label}</span>`;
     html += `<span class="ex-value">${val != null ? fmt(val) : '<span style="color:var(--muted);font-style:italic">Not found in text</span>'}</span>`;
   }
-  if (extracted['_date']) {
-    html += `<span class="ex-label" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Statement Date</span>`;
+  html += `<span class="ex-label" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Statement Date</span>`;
+  if (extracted['_dateFound']) {
     html += `<span class="ex-value" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">${extracted['_date']}</span>`;
+  } else {
+    html += `<span class="ex-value" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);color:var(--red)">⚠ Not found — you must set this manually or it will overwrite your last snapshot</span>`;
   }
   container.innerHTML = html;
   document.getElementById('pdfPreview').style.display = 'block';
@@ -1203,12 +1234,15 @@ function applyPDFValues() {
       document.getElementById(account.field).value = pendingPDFValues[account.field];
     }
   }
-  if (pendingPDFValues['_date']) {
-    const d = new Date(pendingPDFValues['_date']);
-    if (!isNaN(d)) document.getElementById('snapDate').value = d.toISOString().substring(0,10);
+  if (pendingPDFValues['_dateFound']) {
+    document.getElementById('snapDate').value = pendingPDFValues['_date'];
+    hidePDFPreview();
+    toast('Values applied \u2014 review and save when ready \u2713');
+  } else {
+    document.getElementById('snapDate').value = '';
+    hidePDFPreview();
+    toast('Values applied \u2014 set the statement date before saving \u26a0');
   }
-  hidePDFPreview();
-  toast('Values applied \u2014 review and save when ready \u2713');
   document.querySelectorAll('.update-panel')[1].scrollIntoView({behavior:'smooth', block:'start'});
 }
 

@@ -127,9 +127,14 @@
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
     <div class="last-updated" id="lastUpdatedHeader">—</div>
-    <button class="btn" onclick="exportHTML()" style="font-size:12px;padding:7px 16px;background:var(--green);color:#0f1117">
-      &#8595; Export &amp; Save File
-    </button>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="printStatement()" style="font-size:12px;padding:7px 16px;background:var(--accent);color:#fff">
+        &#128438; Print Statement
+      </button>
+      <button class="btn" onclick="exportHTML()" style="font-size:12px;padding:7px 16px;background:var(--green);color:#0f1117">
+        &#8595; Export &amp; Save File
+      </button>
+    </div>
   </div>
 </header>
 <div id="syncBanner" style="display:none;background:#2a1f0a;border-bottom:1px solid var(--accent2);padding:10px 32px;font-size:12px;color:var(--accent2);display:flex;align-items:center;gap:12px">
@@ -244,6 +249,7 @@
       <div class="field"><label>Jean RRSP (45208)</label><input type="number" id="f_jean_rrsp" placeholder="0"></div>
       <div class="field"><label>Jean TFSA (62416)</label><input type="number" id="f_jean_tfsa" placeholder="0"></div>
       <div class="field"><label>Family Trust (44209)</label><input type="number" id="f_trust" placeholder="0"></div>
+      <div class="field"><label>Wood Gundy Trust Inv. (47515322)</label><input type="number" id="f_woodgundy" placeholder="0"></div>
 
       <div class="section-label">Kelly's Accounts</div>
       <div class="field"><label>Kelly RRSP (62418)</label><input type="number" id="f_kelly_rrsp" placeholder="0"></div>
@@ -334,20 +340,20 @@
         <tr>
           <td><strong>Apollo Travelodge</strong></td>
           <td><span class="tag tag-hotel">Hotel</span></td>
-          <td>$250,000</td>
+          <td>$100,000</td>
           <td>$15,000</td>
-          <td>$235,000</td>
-          <td><input type="number" id="lp_apollo" placeholder="235000" value="235000"></td>
-          <td>Hotel · 6% dividend</td>
+          <td>$85,000</td>
+          <td><input type="number" id="lp_apollo" placeholder="85000" value="85000"></td>
+          <td>Hotel · same $ distribution on lower book \u2192 ~7.1% current yield (was 6% on cost)</td>
         </tr>
       </tbody>
       <tfoot>
         <tr style="background:var(--surface2)">
           <td colspan="2"><strong>Total</strong></td>
-          <td><strong>$1,220,833</strong></td>
+          <td><strong>$1,070,833</strong></td>
           <td><strong>$52,500</strong></td>
-          <td><strong>$1,168,333</strong></td>
-          <td><strong id="lpTotalEst">$1,168,333</strong></td>
+          <td><strong>$1,018,333</strong></td>
+          <td><strong id="lpTotalEst">$1,018,333</strong></td>
           <td></td>
         </tr>
       </tfoot>
@@ -527,7 +533,7 @@ const SEED = {
 };
 
 function liquidTotal(s) {
-  return (s.jean_rrsp||0)+(s.jean_tfsa||0)+(s.trust||0)
+  return (s.jean_rrsp||0)+(s.jean_tfsa||0)+(s.trust||0)+(s.woodgundy||0)
         +(s.kelly_rrsp||0)+(s.kelly_tfsa||0)
         +(s.owluja1||0)+(s.owluja2||0)
         +(s.james||0)+(s.luke||0)+(s.owen||0);
@@ -540,7 +546,7 @@ function lpBookTotal() {
         +(getLPVal('lp_clv_opp')||333333)
         +(getLPVal('lp_huntington')||250000)
         +(getLPVal('lp_theia')||212500)
-        +(getLPVal('lp_apollo')||235000);
+        +(getLPVal('lp_apollo')||85000);
 }
 function getLPVal(id) {
   if(lpValues && lpValues[id]) return lpValues[id];
@@ -739,7 +745,7 @@ function updateKPIs() {
   const actualRE     = (last.re_ottawa||0)+(last.re_cottage||0)+(last.re_florida||0);
   const actualOwluja = (last.owluja1||0)+(last.owluja2||0);
   const actualCorp   = actualOwluja+(last.toulon||0)+lpTotal;
-  const actualNonReg = last.trust||0;
+  const actualNonReg = (last.trust||0)+(last.woodgundy||0);
   const actualTFSA   = (last.jean_tfsa||0)+(last.kelly_tfsa||0)+(last.james||0)+(last.luke||0)+(last.owen||0);
   const actualRRSP   = (last.jean_rrsp||0)+(last.kelly_rrsp||0);
 
@@ -805,6 +811,7 @@ function saveSnapshot() {
     jean_rrsp: parseFloat(document.getElementById('f_jean_rrsp').value)||0,
     jean_tfsa: parseFloat(document.getElementById('f_jean_tfsa').value)||0,
     trust: parseFloat(document.getElementById('f_trust').value)||0,
+    woodgundy: parseFloat(document.getElementById('f_woodgundy').value)||0,
     kelly_rrsp: parseFloat(document.getElementById('f_kelly_rrsp').value)||0,
     kelly_tfsa: parseFloat(document.getElementById('f_kelly_tfsa').value)||0,
     owluja1: parseFloat(document.getElementById('f_owluja1').value)||0,
@@ -849,6 +856,7 @@ function loadLastSnapshot() {
   document.getElementById('f_jean_rrsp').value = s.jean_rrsp||'';
   document.getElementById('f_jean_tfsa').value = s.jean_tfsa||'';
   document.getElementById('f_trust').value = s.trust||'';
+  document.getElementById('f_woodgundy').value = s.woodgundy||'';
   document.getElementById('f_kelly_rrsp').value = s.kelly_rrsp||'';
   document.getElementById('f_kelly_tfsa').value = s.kelly_tfsa||'';
   document.getElementById('f_owluja1').value = s.owluja1||'';
@@ -868,7 +876,7 @@ function loadLastSnapshot() {
 }
 
 function clearForm() {
-  ['f_jean_rrsp','f_jean_tfsa','f_trust','f_kelly_rrsp','f_kelly_tfsa',
+  ['f_jean_rrsp','f_jean_tfsa','f_trust','f_woodgundy','f_kelly_rrsp','f_kelly_tfsa',
    'f_owluja1','f_owluja2','f_james','f_luke','f_owen',
    'f_toulon_noi','f_toulon_cap','f_toulon_mortgage','f_toulon_total','f_toulon',
    'f_re_ottawa','f_re_cottage','f_re_florida','f_other']
@@ -930,7 +938,117 @@ function toast(msg) {
 }
 
 
-// ─── CHANGE SINCE LAST SNAPSHOT ───────────────────────────────────────────────
+// ─── PRINT STATEMENT ───────────────────────────────────────────────────────
+function printStatement() {
+  const snaps = [SEED, ...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
+  const curr = snaps[snaps.length-1];
+  const prev = snaps.length>1 ? snaps[snaps.length-2] : null;
+  const yr = new Date(curr.date).getFullYear();
+  const ci = CIBC.years.indexOf(yr);
+  const nw = totalNW(curr);
+  const proj = ci>=0 ? CIBC.netWorth[ci] : null;
+  const variance = proj!=null ? nw-proj : null;
+
+  const lpTotal = lpBookTotal();
+  const actualRE     = (curr.re_ottawa||0)+(curr.re_cottage||0)+(curr.re_florida||0);
+  const actualOwluja = (curr.owluja1||0)+(curr.owluja2||0);
+  const actualCorp   = actualOwluja+(curr.toulon||0)+lpTotal;
+  const actualNonReg = (curr.trust||0)+(curr.woodgundy||0);
+  const actualTFSA   = (curr.jean_tfsa||0)+(curr.kelly_tfsa||0)+(curr.james||0)+(curr.luke||0)+(curr.owen||0);
+  const actualRRSP   = (curr.jean_rrsp||0)+(curr.kelly_rrsp||0);
+  const cibcRE     = ci>=0 ? CIBC.realEstate[ci] : null;
+  const cibcCorp   = ci>=0 ? CIBC.corp[ci] : null;
+  const cibcNonReg = ci>=0 ? CIBC.nonReg[ci] : null;
+  const cibcTFSA   = ci>=0 ? CIBC.tfsa[ci] : null;
+  const cibcRRSP   = ci>=0 ? CIBC.rrspRif[ci] : null;
+
+  const summaryRow = (label, actual, cibcVal) => {
+    const v = cibcVal!=null ? actual-cibcVal : null;
+    const pct = (v!=null && cibcVal) ? (v/Math.abs(cibcVal)*100).toFixed(1) : null;
+    return `<tr>
+      <td>${label}</td>
+      <td class="r">${fmt(actual)}</td>
+      <td class="r">${cibcVal!=null?fmt(cibcVal):'—'}</td>
+      <td class="r ${v==null?'':(v>=0?'pos':'neg')}">${v!=null?(v>=0?'+':'')+fmt(v):'—'}</td>
+      <td class="r ${pct==null?'':(pct>=0?'pos':'neg')}">${pct!=null?(pct>=0?'+':'')+pct+'%':'—'}</td>
+    </tr>`;
+  };
+
+  const lines = [
+    ['Jean RRSP','jean_rrsp'],['Jean TFSA','jean_tfsa'],['Family Trust','trust'],
+    ['Wood Gundy Trust Inv.','woodgundy'],['Kelly RRSP','kelly_rrsp'],['Kelly TFSA','kelly_tfsa'],
+    ['Owluja (411056)','owluja1'],['Owluja (511531)','owluja2'],['James TFSA','james'],
+    ['Luke TFSA','luke'],['Owen TFSA','owen'],['Toulon Equity (50%)','toulon'],
+    ['Ottawa Home','re_ottawa'],['Cottage','re_cottage'],['Florida Home','re_florida'],['Other Assets','other']
+  ];
+  const deltaRow = (label, p, c) => {
+    const d = c-p;
+    if (d===0 && p===0 && c===0) return '';
+    const pct = p!==0 ? (d/Math.abs(p)*100) : (c!==0 ? null : 0);
+    return `<tr>
+      <td>${label}</td>
+      <td class="r">${fmt(p)}</td>
+      <td class="r">${fmt(c)}</td>
+      <td class="r ${d===0?'':(d>0?'pos':'neg')}">${d>=0?'+':''}${fmt(d)}</td>
+      <td class="r ${d===0?'':(d>0?'pos':'neg')}">${pct===null?'—':(pct>=0?'+':'')+pct.toFixed(1)+'%'}</td>
+    </tr>`;
+  };
+  let deltaHtml = '';
+  if (prev) {
+    for (const [label,key] of lines) deltaHtml += deltaRow(label, prev[key]||0, curr[key]||0);
+    deltaHtml += deltaRow('<strong>Liquid Portfolio Total</strong>', liquidTotal(prev), liquidTotal(curr));
+    deltaHtml += deltaRow('<strong>Total Net Worth</strong>', totalNW(prev), totalNW(curr));
+  }
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Net Worth Statement — ${curr.date}</title>
+  <style>
+    body{font-family:Georgia,'Times New Roman',serif;color:#111;max-width:800px;margin:40px auto;padding:0 20px;}
+    h1{font-size:22px;margin-bottom:2px;}
+    .sub{color:#555;font-size:13px;margin-bottom:24px;}
+    h2{font-size:15px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #111;padding-bottom:6px;margin-top:32px;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;}
+    th{text-align:left;border-bottom:1px solid #999;padding:6px 8px;font-size:11px;text-transform:uppercase;color:#555;}
+    td{padding:6px 8px;border-bottom:1px solid #eee;}
+    .r{text-align:right;font-variant-numeric:tabular-nums;}
+    .pos{color:#1a7a3c;} .neg{color:#c0392b;}
+    .bignum{font-size:28px;font-weight:700;margin:4px 0;}
+    .grid{display:flex;gap:40px;margin-top:12px;}
+    @media print{ body{margin:0 auto;} }
+  </style></head><body>
+    <h1>Net Worth Statement — Jean Genier</h1>
+    <div class="sub">Owluja Holdings Inc. · As of ${curr.date}${prev?' · Compared to '+prev.date:''}</div>
+
+    <div class="grid">
+      <div><div style="font-size:11px;color:#555;text-transform:uppercase">Current Net Worth</div><div class="bignum">${fmt(nw)}</div></div>
+      <div><div style="font-size:11px;color:#555;text-transform:uppercase">CIBC ${yr} Target</div><div class="bignum">${proj!=null?fmt(proj):'—'}</div></div>
+      <div><div style="font-size:11px;color:#555;text-transform:uppercase">Variance</div><div class="bignum ${variance==null?'':(variance>=0?'pos':'neg')}">${variance!=null?(variance>=0?'+':'')+fmt(variance):'—'}</div></div>
+    </div>
+
+    <h2>Category Breakdown vs. CIBC Plan</h2>
+    <table>
+      <tr><th>Category</th><th class="r">Actual</th><th class="r">CIBC Target</th><th class="r">Variance $</th><th class="r">Variance %</th></tr>
+      ${summaryRow('Personal Real Estate', actualRE, cibcRE)}
+      ${summaryRow('Corporations (Owluja + Toulon + LPs)', actualCorp, cibcCorp)}
+      ${summaryRow('Non-Registered (Trust + Wood Gundy)', actualNonReg, cibcNonReg)}
+      ${summaryRow('TFSA (all)', actualTFSA, cibcTFSA)}
+      ${summaryRow('RRSP (all)', actualRRSP, cibcRRSP)}
+    </table>
+
+    ${prev ? `
+    <h2>Changes Since Last Snapshot (${prev.date} \u2192 ${curr.date})</h2>
+    <table>
+      <tr><th>Line Item</th><th class="r">Previous</th><th class="r">Current</th><th class="r">Change $</th><th class="r">Change %</th></tr>
+      ${deltaHtml}
+    </table>` : `<p style="color:#555;font-style:italic;margin-top:20px">Only one snapshot on file — no prior period to compare against yet.</p>`}
+
+    <div class="sub" style="margin-top:40px;border-top:1px solid #ccc;padding-top:10px">Generated ${new Date().toLocaleString('en-CA')} \u00b7 owluja/Personal net worth dashboard</div>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
+}
+
 function buildDeltaPanel() {
   const title = document.getElementById('deltaPanelTitle');
   const subtitle = document.getElementById('deltaPanelSubtitle');
@@ -952,6 +1070,7 @@ function buildDeltaPanel() {
     { label: 'Jean RRSP',            key: 'jean_rrsp' },
     { label: 'Jean TFSA',            key: 'jean_tfsa' },
     { label: 'Family Trust',         key: 'trust' },
+    { label: 'Wood Gundy Trust Inv.', key: 'woodgundy' },
     { label: 'Kelly RRSP',           key: 'kelly_rrsp' },
     { label: 'Kelly TFSA',           key: 'kelly_tfsa' },
     { label: 'Owluja (411056)',      key: 'owluja1' },
@@ -1086,10 +1205,26 @@ function buildVariancePanel() {
     {
       label: 'Family Trust (44209)',
       actual: s.trust||0,
+      cibc: null,
+      color: '#4e9af1',
+      bold: false,
+      note: 'Component of Non-Reg total below'
+    },
+    {
+      label: 'Wood Gundy Trust Inv. (47515322)',
+      actual: s.woodgundy||0,
+      cibc: null,
+      color: '#4e9af1',
+      bold: false,
+      note: 'Component of Non-Reg total below'
+    },
+    {
+      label: 'Non-Registered Total',
+      actual: (s.trust||0)+(s.woodgundy||0),
       cibc: ci>=0 ? CIBC.nonReg[ci] : null,
       color: '#4e9af1',
       bold: true,
-      note: 'Mapped to CIBC Non-Reg line'
+      note: 'Sum vs. CIBC Non-Reg projection'
     },
     // ── CIBC TFSA ──
     { group: true, label: 'CIBC — TFSA ACCOUNTS' },
@@ -1272,6 +1407,7 @@ const ACCOUNT_MAP = [
   { patterns: ['Jean Genier RRSP (45208)', 'RRSP (45208)', '45208'], field: 'f_jean_rrsp',  label: 'Jean RRSP (45208)' },
   { patterns: ['Jean Genier TFSA (62416)', 'TFSA (62416)', '62416'], field: 'f_jean_tfsa',  label: 'Jean TFSA (62416)' },
   { patterns: ['Jean R. Genier Family Trust (44209)', 'Family Trust (44209)', '44209'], field: 'f_trust', label: 'Family Trust (44209)' },
+  { patterns: ['Investment (47515322)', 'Wood Gundy (47515322)', '47515322'], field: 'f_woodgundy', label: 'Wood Gundy Trust Inv. (47515322)' },
   { patterns: ['Kelly Genier RRSP (62418)', 'RRSP (62418)', '62418'], field: 'f_kelly_rrsp', label: 'Kelly RRSP (62418)' },
   { patterns: ['Kelly Genier TFSA (62417)', 'TFSA (62417)', '62417'], field: 'f_kelly_tfsa', label: 'Kelly TFSA (62417)' },
   { patterns: ['Owluja Holdings Inc. (411056)', '411056'],            field: 'f_owluja1',   label: 'Owluja (411056)' },

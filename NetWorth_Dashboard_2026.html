@@ -39,7 +39,7 @@
   #pdfPreview .ex-value { color:var(--green); font-variant-numeric:tabular-nums; font-weight:600; }
 
   /* KPI strip */
-  .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
+  .kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 24px; }
   .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
   .kpi .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
   .kpi .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -142,30 +142,47 @@
 
   <!-- KPI strip -->
   <div class="kpi-strip">
-    <div class="kpi neutral">
+    <div class="kpi neutral" id="kpiNWCard">
       <div class="label">Current Net Worth</div>
       <div class="value" id="kpiCurrent">—</div>
       <div class="sub" id="kpiDate">No data entered yet</div>
     </div>
-    <div class="kpi neutral">
-      <div class="label">CIBC Projection (this year)</div>
+    <div class="kpi neutral" id="kpiVarCard">
+      <div class="label">CIBC Target</div>
       <div class="value" id="kpiProjected">—</div>
       <div class="sub" id="kpiYear">—</div>
-    </div>
-    <div class="kpi" id="kpiVarCard">
-      <div class="label">Variance vs. Plan</div>
-      <div class="value" id="kpiVar">—</div>
+      <div class="value" id="kpiVar" style="margin-top:8px">—</div>
       <div class="sub" id="kpiVarPct">—</div>
     </div>
     <div class="kpi neutral">
-      <div class="label">LP Investments (Book)</div>
-      <div class="value" id="kpiLP">$1,083,333</div>
-      <div class="sub">5 partnerships · cost basis</div>
+      <div class="label">Personal Real Estate Total</div>
+      <div class="value" id="kpiRealEstate">—</div>
+      <div class="sub" id="kpiRealEstateSub">—</div>
     </div>
     <div class="kpi neutral">
-      <div class="label">Toulon NOI (2025)</div>
-      <div class="value" id="kpiToulon">$261,000</div>
-      <div class="sub">2024: $246,000 · +6.1%</div>
+      <div class="label">Commercial Real Estate</div>
+      <div class="value" id="kpiCommRE">—</div>
+      <div class="sub" id="kpiCommRESub">—</div>
+    </div>
+    <div class="kpi neutral">
+      <div class="label">Owluja Holdings Total</div>
+      <div class="value" id="kpiOwluja">—</div>
+      <div class="sub" id="kpiOwlujaSub">—</div>
+    </div>
+    <div class="kpi neutral">
+      <div class="label">Non-Registered Total</div>
+      <div class="value" id="kpiNonReg">—</div>
+      <div class="sub" id="kpiNonRegSub">—</div>
+    </div>
+    <div class="kpi neutral">
+      <div class="label">TFSA Total</div>
+      <div class="value" id="kpiTFSA">—</div>
+      <div class="sub" id="kpiTFSASub">—</div>
+    </div>
+    <div class="kpi neutral">
+      <div class="label">RRSP Total</div>
+      <div class="value" id="kpiRRSP">—</div>
+      <div class="sub" id="kpiRRSPSub">—</div>
     </div>
   </div>
 
@@ -363,6 +380,27 @@
     </div>
   </div>
 
+  <!-- Change Since Last Snapshot -->
+  <div class="chart-panel" id="deltaSection">
+    <div class="panel-title" id="deltaPanelTitle">Change Since Last Snapshot</div>
+    <p class="note" id="deltaPanelSubtitle" style="margin-bottom:16px"></p>
+    <div style="overflow-x:auto;">
+      <table id="deltaTable">
+        <thead>
+          <tr>
+            <th>Line Item</th>
+            <th style="text-align:right">Previous</th>
+            <th style="text-align:right">Current</th>
+            <th style="text-align:right">Change $</th>
+            <th style="text-align:right">Change %</th>
+          </tr>
+        </thead>
+        <tbody id="deltaTableBody"></tbody>
+        <tfoot id="deltaTableFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
   <!-- Snapshot history -->
   <div class="history-panel">
     <h3>Snapshot History</h3>
@@ -425,34 +463,11 @@ const BAKED_SNAPSHOTS = [
     "re_cottage": 2500000,
     "re_florida": 1000000,
     "other": 130000
-  },
-  {
-    "date": "2026-07-19",
-    "jean_rrsp": 888232.78,
-    "jean_tfsa": 171957.31,
-    "trust": 3250163.22,
-    "kelly_rrsp": 159638.24,
-    "kelly_tfsa": 171951.54,
-    "owluja1": 2134021.59,
-    "owluja2": 0,
-    "james": 32548.77,
-    "luke": 41150.43,
-    "owen": 42397.34,
-    "toulon_noi": 261000,
-    "toulon_cap": 5.68,
-    "toulon_mortgage": 2910847,
-    "toulon": 842992,
-    "re_ottawa": 1200000,
-    "re_cottage": 2500000,
-    "re_florida": 1000000,
-    "other": 130000
   }
 ];
 
 
-
 const BAKED_LP = null;
-
 
 
 // ── END BAKED DATA ──
@@ -703,14 +718,51 @@ function updateKPIs() {
 
   if(variance!==null) {
     const pct = ((variance/proj)*100).toFixed(1);
-    document.getElementById('kpiVar').textContent = (variance>=0?'+':'')+fmtShort(variance);
-    document.getElementById('kpiVarPct').textContent = (variance>=0?'+':'')+pct+'% vs plan';
-    const card = document.getElementById('kpiVarCard');
-    card.className = 'kpi ' + (variance>=0?'positive':'negative');
+    const varEl = document.getElementById('kpiVar');
+    const varPctEl = document.getElementById('kpiVarPct');
+    varEl.textContent = (variance>=0?'+':'-')+fmtShort(Math.abs(variance));
+    varPctEl.textContent = (variance>=0?'+':'')+pct+'% vs plan';
+    const color = variance>=0 ? 'var(--green)' : 'var(--red)';
+    varEl.style.color = color;
+    varPctEl.style.color = color;
   }
 
-  // LP total
-  document.getElementById('kpiLP').textContent = fmtShort(lpBookTotal());
+  // Commercial Real Estate = LP Investments (book) + Toulon Equity
+  const lpTotal = lpBookTotal();
+  const toulonEquity = last.toulon||0;
+  document.getElementById('kpiCommRE').textContent = fmtShort(lpTotal + toulonEquity);
+  document.getElementById('kpiCommRESub').textContent =
+    'LP: '+fmtShort(lpTotal)+' · Toulon: '+fmtShort(toulonEquity)+(last.toulon_noi ? ' (NOI '+fmtShort(last.toulon_noi)+' @ '+(last.toulon_cap||5.68)+'%)' : '');
+
+  // Category totals vs. CIBC projection for the current year
+  const ci = CIBC.years.indexOf(yr);
+  const actualRE     = (last.re_ottawa||0)+(last.re_cottage||0)+(last.re_florida||0);
+  const actualOwluja = (last.owluja1||0)+(last.owluja2||0);
+  const actualCorp   = actualOwluja+(last.toulon||0)+lpTotal;
+  const actualNonReg = last.trust||0;
+  const actualTFSA   = (last.jean_tfsa||0)+(last.kelly_tfsa||0)+(last.james||0)+(last.luke||0)+(last.owen||0);
+  const actualRRSP   = (last.jean_rrsp||0)+(last.kelly_rrsp||0);
+
+  const cibcRE     = ci>=0 ? CIBC.realEstate[ci] : null;
+  const cibcCorp   = ci>=0 ? CIBC.corp[ci] : null;
+  const cibcNonReg = ci>=0 ? CIBC.nonReg[ci] : null;
+  const cibcTFSA   = ci>=0 ? CIBC.tfsa[ci] : null;
+  const cibcRRSP   = ci>=0 ? CIBC.rrspRif[ci] : null;
+
+  document.getElementById('kpiRealEstate').textContent = fmtShort(actualRE);
+  document.getElementById('kpiRealEstateSub').textContent = cibcRE!=null ? 'CIBC: '+fmtShort(cibcRE) : '—';
+
+  document.getElementById('kpiOwluja').textContent = fmtShort(actualOwluja);
+  document.getElementById('kpiOwlujaSub').textContent = cibcCorp!=null ? 'CIBC Corp bucket (incl. Toulon/LPs): '+fmtShort(cibcCorp) : '—';
+
+  document.getElementById('kpiNonReg').textContent = fmtShort(actualNonReg);
+  document.getElementById('kpiNonRegSub').textContent = cibcNonReg!=null ? 'CIBC: '+fmtShort(cibcNonReg) : '—';
+
+  document.getElementById('kpiTFSA').textContent = fmtShort(actualTFSA);
+  document.getElementById('kpiTFSASub').textContent = cibcTFSA!=null ? 'CIBC: '+fmtShort(cibcTFSA) : '—';
+
+  document.getElementById('kpiRRSP').textContent = fmtShort(actualRRSP);
+  document.getElementById('kpiRRSPSub').textContent = cibcRRSP!=null ? 'CIBC: '+fmtShort(cibcRRSP) : '—';
 }
 
 // ─── LP ───────────────────────────────────────────────────────────────────────
@@ -878,7 +930,78 @@ function toast(msg) {
 }
 
 
-// ─── VARIANCE BREAKDOWN ───────────────────────────────────────────────────────
+// ─── CHANGE SINCE LAST SNAPSHOT ───────────────────────────────────────────────
+function buildDeltaPanel() {
+  const title = document.getElementById('deltaPanelTitle');
+  const subtitle = document.getElementById('deltaPanelSubtitle');
+  const body = document.getElementById('deltaTableBody');
+  const foot = document.getElementById('deltaTableFoot');
+
+  const snaps = [SEED, ...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
+  if (snaps.length < 2) {
+    subtitle.textContent = 'Save at least two snapshots to see changes here.';
+    body.innerHTML = '';
+    foot.innerHTML = '';
+    return;
+  }
+  const curr = snaps[snaps.length-1];
+  const prev = snaps[snaps.length-2];
+  subtitle.textContent = 'Comparing ' + prev.date + ' \u2192 ' + curr.date + (curr.label ? ' (' + curr.label + ')' : '');
+
+  const lines = [
+    { label: 'Jean RRSP',            key: 'jean_rrsp' },
+    { label: 'Jean TFSA',            key: 'jean_tfsa' },
+    { label: 'Family Trust',         key: 'trust' },
+    { label: 'Kelly RRSP',           key: 'kelly_rrsp' },
+    { label: 'Kelly TFSA',           key: 'kelly_tfsa' },
+    { label: 'Owluja (411056)',      key: 'owluja1' },
+    { label: 'Owluja (511531)',      key: 'owluja2' },
+    { label: 'James TFSA',           key: 'james' },
+    { label: 'Luke TFSA',            key: 'luke' },
+    { label: 'Owen TFSA',            key: 'owen' },
+    { label: 'Toulon Equity (50%)',  key: 'toulon' },
+    { label: 'Ottawa Home',          key: 're_ottawa' },
+    { label: 'Cottage',              key: 're_cottage' },
+    { label: 'Florida Home',         key: 're_florida' },
+    { label: 'Other Assets',         key: 'other' },
+  ];
+
+  const row = (label, prevVal, currVal, bold) => {
+    const p = prevVal||0, c = currVal||0;
+    const delta = c - p;
+    const pct = p !== 0 ? (delta/Math.abs(p)*100) : (c !== 0 ? null : 0);
+    const cls = delta === 0 ? '' : (delta > 0 ? 'vs-positive' : 'vs-negative');
+    const style = bold ? ' style="font-weight:700;border-top:1px solid var(--border)"' : '';
+    return `<tr${style}>
+      <td>${label}</td>
+      <td style="text-align:right">${fmt(p)}</td>
+      <td style="text-align:right">${fmt(c)}</td>
+      <td style="text-align:right" class="${cls}">${delta>=0?'+':''}${fmt(delta)}</td>
+      <td style="text-align:right" class="${cls}">${pct===null?'\u2014':(pct>=0?'+':'')+pct.toFixed(1)+'%'}</td>
+    </tr>`;
+  };
+
+  let html = '';
+  let anyChanged = false;
+  for (const line of lines) {
+    const p = prev[line.key]||0, c = curr[line.key]||0;
+    if (p !== c) anyChanged = true;
+    html += row(line.label, p, c, false);
+  }
+  body.innerHTML = html;
+  if (!anyChanged) {
+    body.innerHTML = '<tr><td colspan="5" style="color:var(--muted);font-style:italic">No changes in individual line items between these two snapshots.</td></tr>';
+  }
+
+  // Summary totals
+  const liqDelta  = row('Liquid Portfolio Total', liquidTotal(prev), liquidTotal(curr), true);
+  const reP = (prev.re_ottawa||0)+(prev.re_cottage||0)+(prev.re_florida||0);
+  const reC = (curr.re_ottawa||0)+(curr.re_cottage||0)+(curr.re_florida||0);
+  const reDelta = row('Real Estate Total', reP, reC, true);
+  const nwDelta = row('Total Net Worth (incl. current LP estimate)', totalNW(prev), totalNW(curr), true);
+  foot.innerHTML = liqDelta + reDelta + nwDelta;
+}
+
 function buildVariancePanel() {
   const snaps = [SEED, ...snapshots].sort((a,b)=>a.date.localeCompare(b.date));
   const s = snaps[snaps.length-1];
@@ -1361,6 +1484,7 @@ function updateAll() {
   buildPieChart();
   buildStackChart();
   buildVariancePanel();
+  buildDeltaPanel();
   buildHistory();
   checkSyncStatus();
 }
